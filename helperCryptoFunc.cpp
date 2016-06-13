@@ -26,19 +26,49 @@ void errorHandle() {
 
 struct Data {
     unsigned char data[bufferLength];
-    int length;
+    long unsigned int length = 0;
+    long unsigned int availableSpace = bufferLength;
 };
 
 struct AESData {
     unsigned char key[keyLength];
     unsigned char initVector[ivLength];
+    int length = 0;
 };
 
+void envelope_seal(EVP_PKEY** pub_key, const Data& toEncrypt, Data& oEncryptedData, AESData& oAESData) {
+    EVP_CIPHER_CTX* ctx;
+    int partialLength = 0;
 
-void encrypt(AESData iAESData, Data toEncrypt, Data& oEncryptedData) {
+    if(!(ctx = EVP_CIPHER_CTX_new()))
+        errorHandle();
+    
+    if (1 != EVP_SealInit(ctx, EVP_aes_128_cbc(), (unsigned char **) &oAESData.key, &oAESData.length, oAESData.initVector, pub_key, 1))
+        errorHandle();
+
+    if (1 != EVP_SealUpdate(ctx, oEncryptedData.data, &partialLength, toEncrypt.data, toEncrypt.length))
+        errorHandle();
+    oEncryptedData.length += partialLength;
+
+    if (1 != EVP_SealFinal(ctx, oEncryptedData.data + oEncryptedData.length, &partialLength))
+        errorHandle();
+    oEncryptedData.length += partialLength;
+
+    EVP_CIPHER_CTX_free(ctx);
+}
+/*
+void envelope_open(EVP_PKEY** pub_key, const Data& encryptedData, Data& oDecryptedData, const Data& iAESData) {
+    EVP_CIPHER_CTX* ctx;
+    int partialLength = 0;
+
+    if(!(ctx = EVP_CIPHER_CTX_new()))
+        errorHandle();
+
+    if (1 != EVP
+*/
+void encrypt(const AESData& iAESData, const Data& toEncrypt, Data& oEncryptedData) {
     //Initialization of cipher context
     EVP_CIPHER_CTX* cipherCtx = EVP_CIPHER_CTX_new();
-    EVP_CIPHER_CTX_set_padding(cipherCtx, 1);
 
     //START: Message Encryption operation
     int partialLength = 0;
@@ -54,8 +84,65 @@ void encrypt(AESData iAESData, Data toEncrypt, Data& oEncryptedData) {
         errorHandle();
     oEncryptedData.length += partialLength;
     //END: Message Encryption operation
+    EVP_CIPHER_CTX_free(cipherCtx);
 }
 
+void decrypt(const AESData& iAESData, const Data& toDecrypt, Data& oDecryptedData) {
+    //Initialization of cipher context
+    EVP_CIPHER_CTX* cipherCtx = EVP_CIPHER_CTX_new();
+    EVP_CIPHER_CTX_set_padding(cipherCtx, 1);
+
+    //START: Decryption operation
+    int partialDataLength = 0;
+
+    if (1 != EVP_DecryptInit_ex(cipherCtx, EVP_aes_256_cbc(), NULL, iAESData.key, iAESData.initVector))
+        errorHandle();
+
+    if (1 != EVP_DecryptUpdate(cipherCtx, oDecryptedData.data, &partialDataLength, toDecrypt.data, toDecrypt.length))
+        errorHandle();
+    oDecryptedData.length += partialDataLength;
+
+    if (1 != EVP_DecryptFinal_ex(cipherCtx, oDecryptedData.data+oDecryptedData.length, &partialDataLength))
+        errorHandle();
+    oDecryptedData.length += partialDataLength;
+    //END: Decryption operation
+    EVP_CIPHER_CTX_free(cipherCtx);
+}
+
+void sign(EVP_PKEY* privateKey, const Data& toSign, Data& oSignatureData) {
+    //START: Message Signing operation
+    EVP_MD_CTX* digestSignCtx = EVP_MD_CTX_create();
+
+    if (1 != EVP_DigestSignInit(digestSignCtx, NULL, EVP_sha256(), NULL, privateKey))
+        errorHandle();
+
+    if (1 != EVP_DigestSignUpdate(digestSignCtx, toSign.data, toSign.length))
+        errorHandle();
+
+    if (1 != EVP_DigestSignFinal(digestSignCtx, NULL, &oSignatureData.length))
+        errorHandle();
+
+    if (1 != EVP_DigestSignFinal(digestSignCtx, oSignatureData.data, &oSignatureData.length))
+        errorHandle();
+    EVP_MD_CTX_cleanup(digestSignCtx);
+    //END: Message Signing operation
+}
+
+bool verify(EVP_PKEY* publicKey, const Data& signedData, const Data& signatureData) {
+    //START: Message Verifying operation
+    EVP_MD_CTX* digestSignCtx = EVP_MD_CTX_create();
+    if (1 != EVP_DigestVerifyInit(digestSignCtx, NULL, EVP_sha256(), NULL, publicKey))
+        errorHandle();
+
+    if (1 != EVP_DigestVerifyUpdate(digestSignCtx, signedData.data, signedData.length))
+        errorHandle();
+
+    bool ret = EVP_DigestVerifyFinal(digestSignCtx, signatureData.data, signatureData.length);
+    EVP_MD_CTX_cleanup(digestSignCtx);
+
+    return ret;
+    //END: Message Verifying operation
+}
 
 int main(int argc, char* argv[]) {
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
@@ -63,14 +150,7 @@ int main(int argc, char* argv[]) {
     int ret = -1;
     unsigned char key[keyLength];
     unsigned char initVector[ivLength];
-    unsigned char encryptedData[bufferLength];
-    unsigned char decryptedData[bufferLength];
-
-    int encryptedDataLength = 0;
-    int totLengthEncr = 0;
-    int totLengthDecr = 0;
-    int decryptedDataLength = 0;
-
+    
     //Generating key and IV
     generateRandomBuffer(key, sizeof(key));
     generateRandomBuffer(initVector, sizeof(initVector));
@@ -86,36 +166,12 @@ int main(int argc, char* argv[]) {
     memcpy(aToEncrypt.data, toEncrypt.c_str(), toEncrypt.length());
     aToEncrypt.length = toEncrypt.length();
     
+    //Encrypting
     Data aEncryptedData;
-
-    encrypt(aAESData, aToEncrypt, aEncryptedData);
-
-
-    //Initialization of cipher context
-    EVP_CIPHER_CTX* cipherCtx = EVP_CIPHER_CTX_new();
-    EVP_CIPHER_CTX_set_padding(cipherCtx, 1);
-
-    //START: Message Encryption operation
     start = std::chrono::high_resolution_clock::now();
-
-    if (1 != EVP_EncryptInit_ex(cipherCtx, EVP_aes_256_cbc(), NULL, key, initVector))
-        errorHandle();
-
-    if (1 != EVP_EncryptUpdate(cipherCtx, encryptedData, &encryptedDataLength, (unsigned char *) toEncrypt.c_str(),
-        toEncrypt.length()))
-        errorHandle();
-    totLengthEncr += encryptedDataLength;
-
-    if (1 != EVP_EncryptFinal_ex(cipherCtx, encryptedData+encryptedDataLength, &encryptedDataLength))
-        errorHandle();
-    totLengthEncr += encryptedDataLength;
+    encrypt(aAESData, aToEncrypt, aEncryptedData);
     end = std::chrono::system_clock::now(); 
     encryptionMicro = end - start;
-    //END: Message Encryption operation
-
-
-    unsigned char signatureData[bufferLength];
-    size_t signatureDataLength = sizeof(signatureData);
 
     //Getting RSA Private key
     FILE* fp;
@@ -124,102 +180,53 @@ int main(int argc, char* argv[]) {
     if ((fp = fopen("/etc/ssh/ssh_host_rsa_key", "r")) != NULL) {
         privateKey = PEM_read_PrivateKey(fp, NULL, 0, NULL);
         if (privateKey == NULL)
-            exit(1);
+            errorHandle();
         std::cout << "Loaded Private RSA key!" << std::endl;
         fclose(fp);
     } else {
         std::cout << "Private RSA key missing, exiting!" << std::endl;
     }
 
-
-    //START: Message Signing operation
+    //Signing
+    Data aSignatureData;
     start = std::chrono::high_resolution_clock::now();
-
-    EVP_MD_CTX* digestSignCtx = EVP_MD_CTX_create();
-
-    if (1 != EVP_DigestSignInit(digestSignCtx, NULL, EVP_sha256(), NULL, privateKey))
-        errorHandle();
-
-    if (1 != EVP_DigestSignUpdate(digestSignCtx, toEncrypt.c_str(), toEncrypt.length()))
-        errorHandle();
-
-    if (1 != EVP_DigestSignFinal(digestSignCtx, signatureData, &signatureDataLength))
-        errorHandle();
-
-
-    std::string signatureDataStr = std::string((const char*)signatureData).substr(0, signatureDataLength);
+    sign(privateKey, aEncryptedData, aSignatureData);
     end = std::chrono::system_clock::now(); 
     signingMicro = end - start;
-    //END: Message Signing operation
 
     //Getting RSA Public key
     EVP_PKEY* publicKey;
-    char error[bufferLength];
 
     if ((fp = fopen("/etc/ssh/ssh_host_rsa_key_pub", "r")) != NULL) {
         publicKey = PEM_read_PUBKEY(fp, NULL, 0, NULL);
         if (publicKey == NULL)
-            exit(1);
+            errorHandle();
+
         std::cout << "Loaded Public RSA key!" << std::endl;
         fclose(fp);
     } else {
         std::cout << "Public RSA key missing, exiting!" << std::endl;
+        exit(1);
     }
 
-    //START: Message Verifying operation
+    //Verifying
     start = std::chrono::high_resolution_clock::now();
-    if (1 != EVP_DigestVerifyInit(digestSignCtx, NULL, EVP_sha256(), NULL, publicKey))
-        errorHandle();
+    bool verified= verify(publicKey, aEncryptedData, aSignatureData);
+    end = std::chrono::system_clock::now(); 
+    verifyingMicro = end - start;
 
-    if (1 != EVP_DigestVerifyUpdate(digestSignCtx, toEncrypt.c_str(), toEncrypt.length()))
-        errorHandle();
 
-    if (EVP_DigestVerifyFinal(digestSignCtx, signatureData, signatureDataLength))
+    if (verified)
         std::cout << "Signature VERIFIED!" << std::endl;
     else
         std::cout << "[NOT] Signature *not* VERIFIED! [NOT]" << std::endl;
 
-    end = std::chrono::system_clock::now(); 
-    verifyingMicro = end - start;
-    //END: Message Verifying operation
-
-
-    //START: Decryption operation
-    start = std::chrono::high_resolution_clock::now();
-
-    if (1 != EVP_DecryptInit_ex(cipherCtx, EVP_aes_256_cbc(), NULL, key, initVector))
-        errorHandle();
-
-    if (1 != EVP_DecryptUpdate(cipherCtx, decryptedData, &decryptedDataLength, encryptedData, totLengthEncr))
-        errorHandle();
-    totLengthDecr += decryptedDataLength;
-
-    if (1 != EVP_DecryptFinal_ex(cipherCtx, decryptedData+decryptedDataLength, &decryptedDataLength))
-        errorHandle();
-    totLengthDecr += decryptedDataLength;
-    end = std::chrono::system_clock::now(); 
-    decryptionMicro = end - start;
-    //END: Decryption operation
-    
-
+    //Decryption
     Data aDecryptedData;
-    //START: Decryption operation
     start = std::chrono::high_resolution_clock::now();
-    int partialDataLength = 0;
-
-    if (1 != EVP_DecryptInit_ex(cipherCtx, EVP_aes_256_cbc(), NULL, aAESData.key, aAESData.initVector))
-        errorHandle();
-
-    if (1 != EVP_DecryptUpdate(cipherCtx, aDecryptedData.data, &partialDataLength, aEncryptedData.data, aEncryptedData.length))
-        errorHandle();
-    aDecryptedData.length += partialDataLength;
-
-    if (1 != EVP_DecryptFinal_ex(cipherCtx, aDecryptedData.data+aDecryptedData.length, &partialDataLength))
-        errorHandle();
-    aDecryptedData.length += partialDataLength;
+    decrypt(aAESData, aEncryptedData, aDecryptedData);
     end = std::chrono::system_clock::now(); 
     decryptionMicro = end - start;
-    //END: Decryption operation
 
     std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
     //std::string decryptedDataStr = std::string((const char*)decryptedData).substr(0, totLengthDecr);
@@ -231,5 +238,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-
 
