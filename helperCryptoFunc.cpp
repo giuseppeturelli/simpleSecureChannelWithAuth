@@ -26,7 +26,7 @@ void errorHandle() {
 
 struct Data {
     unsigned char data[bufferLength];
-    long unsigned int length = 0;
+    unsigned int length = 0;
     long unsigned int availableSpace = bufferLength;
 };
 
@@ -36,14 +36,14 @@ struct AESData {
     int length = 0;
 };
 
-void envelope_seal(EVP_PKEY** pub_key, const Data& toEncrypt, Data& oEncryptedData, AESData& oAESData) {
+void envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt, Data& oEncryptedData, AESData& oAESData) {
     EVP_CIPHER_CTX* ctx;
     int partialLength = 0;
 
     if(!(ctx = EVP_CIPHER_CTX_new()))
         errorHandle();
     
-    if (1 != EVP_SealInit(ctx, EVP_aes_128_cbc(), (unsigned char **) &oAESData.key, &oAESData.length, oAESData.initVector, pub_key, 1))
+    if (1 != EVP_SealInit(ctx, EVP_aes_128_cbc(), (unsigned char **) &oAESData.key, &oAESData.length, oAESData.initVector, publicKey, 1))
         errorHandle();
 
     if (1 != EVP_SealUpdate(ctx, oEncryptedData.data, &partialLength, toEncrypt.data, toEncrypt.length))
@@ -56,16 +56,28 @@ void envelope_seal(EVP_PKEY** pub_key, const Data& toEncrypt, Data& oEncryptedDa
 
     EVP_CIPHER_CTX_free(ctx);
 }
-/*
-void envelope_open(EVP_PKEY** pub_key, const Data& encryptedData, Data& oDecryptedData, const Data& iAESData) {
+
+void envelope_open(EVP_PKEY* privateKey, const Data& encryptedData, Data& oDecryptedData, const AESData& iAESData) {
     EVP_CIPHER_CTX* ctx;
     int partialLength = 0;
 
     if(!(ctx = EVP_CIPHER_CTX_new()))
         errorHandle();
 
-    if (1 != EVP
-*/
+    if (1 != EVP_OpenInit(ctx, EVP_aes_128_cbc(), iAESData.key, iAESData.length, iAESData.initVector, privateKey))
+       errorHandle();
+
+    if (1 != EVP_OpenUpdate(ctx, oDecryptedData.data, &partialLength, encryptedData.data, encryptedData.length))
+        errorHandle();
+    oDecryptedData.length += partialLength;
+
+    if (1 != EVP_OpenFinal(ctx, oDecryptedData.data + oDecryptedData.length, &partialLength))
+        errorHandle();
+    oDecryptedData.length += partialLength;
+
+    EVP_CIPHER_CTX_free(ctx);
+}
+
 void encrypt(const AESData& iAESData, const Data& toEncrypt, Data& oEncryptedData) {
     //Initialization of cipher context
     EVP_CIPHER_CTX* cipherCtx = EVP_CIPHER_CTX_new();
