@@ -42,7 +42,7 @@ void envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt, Data& oEncrypted
 
     if(!(ctx = EVP_CIPHER_CTX_new()))
         errorHandle();
-$
+
     if (1 != EVP_SealInit(ctx, EVP_aes_128_cbc(), (unsigned char **) &oAESData.key, &oAESData.length, oAESData.initVector, publicKey, 1))
         errorHandle();
 
