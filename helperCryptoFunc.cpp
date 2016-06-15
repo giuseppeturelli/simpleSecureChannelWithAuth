@@ -9,8 +9,7 @@
 #include <openssl/err.h>
 
 static const int bufferLength = 2048;
-static const int keyLength = 16;
-static const int ivLength = 16;
+static const int keyLength = 1024;
 
 void generateRandomBuffer(unsigned char ioRandBuffer[], int size) {
     RAND_bytes(ioRandBuffer, size);
@@ -32,18 +31,21 @@ struct Data {
 
 struct AESData {
     unsigned char key[keyLength];
-    unsigned char initVector[ivLength];
+    unsigned char initVector[EVP_MAX_IV_LENGTH];
     int length = 0;
 };
 
 void envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt, Data& oEncryptedData, AESData& oAESData) {
     EVP_CIPHER_CTX* ctx;
     int partialLength = 0;
+    unsigned char* tempKey;
+
+    tempKey = (unsigned char *) malloc(EVP_PKEY_size(publicKey[0]));
 
     if(!(ctx = EVP_CIPHER_CTX_new()))
         errorHandle();
 
-    if (1 != EVP_SealInit(ctx, EVP_aes_128_cbc(), (unsigned char **) &oAESData.key, &oAESData.length, oAESData.initVector, publicKey, 1))
+    if (!EVP_SealInit(ctx, EVP_aes_128_cbc(), &tempKey, &oAESData.length, oAESData.initVector, publicKey, 1))
         errorHandle();
 
     if (1 != EVP_SealUpdate(ctx, oEncryptedData.data, &partialLength, toEncrypt.data, toEncrypt.length))
@@ -53,6 +55,9 @@ void envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt, Data& oEncrypted
     if (1 != EVP_SealFinal(ctx, oEncryptedData.data + oEncryptedData.length, &partialLength))
         errorHandle();
     oEncryptedData.length += partialLength;
+
+    memcpy(oAESData.key, tempKey, oAESData.length);
+    free(tempKey);
 
     EVP_CIPHER_CTX_free(ctx);
 }
@@ -136,7 +141,7 @@ void sign(EVP_PKEY* privateKey, const Data& toSign, Data& oSignatureData) {
 
     if (1 != EVP_DigestSignFinal(digestSignCtx, oSignatureData.data, (size_t*) &oSignatureData.length))
         errorHandle();
-    EVP_MD_CTX_cleanup(digestSignCtx);
+    EVP_MD_CTX_destroy(digestSignCtx);
     //END: Message Signing operation
 }
 
@@ -150,7 +155,7 @@ bool verify(EVP_PKEY* publicKey, const Data& signedData, const Data& signatureDa
         errorHandle();
 
     bool ret = EVP_DigestVerifyFinal(digestSignCtx, signatureData.data, signatureData.length);
-    EVP_MD_CTX_cleanup(digestSignCtx);
+    EVP_MD_CTX_destroy(digestSignCtx);
 
     return ret;
     //END: Message Verifying operation
@@ -161,15 +166,8 @@ int main(int argc, char* argv[]) {
     std::chrono::duration<double,std::micro> encryptionMicro, signingMicro, verifyingMicro, decryptionMicro;
     int ret = -1;
     unsigned char key[keyLength];
-    unsigned char initVector[ivLength];
+    unsigned char initVector[EVP_MAX_IV_LENGTH];
 
-    //Generating key and IV
-    generateRandomBuffer(key, sizeof(key));
-    generateRandomBuffer(initVector, sizeof(initVector));
-
-    AESData aAESData;
-    memcpy(aAESData.key, key, keyLength);
-    memcpy(aAESData.initVector, initVector, ivLength);
 
     //std::string toEncrypt = "u8bZgY4IB0CHtAxNTLpa8oCWji8kvAqFx07Mb3sptkBC9RPS3kOe3w4xVFvv77Go01LG2yXzk300yTTJxNNRzv5BDt2LeWcbqhKgIJli1gjlpgy2yeueLaTrkOBMPKIWq1GNyv3E3k5u8kkQUzDumrUUvu6XZvBstOlWKcni2k3lHD382yaDhwvvPau8Acz7Uucaeg1hTr3G0VB2ESSVssAwzbGgS5OUfA24U2ifSOe4IncxWB8WJF9NXbytoM7gSbF2M20iPRUhtqnTDi4oQxDEUUiySCjKRh2kUNQ6Qv4tAfiMbtei6fOrxF6Ivb6oCCY0E2m2OuIOTPVrvVt0s8x2u6oiElyIwjG7oa70TvLEaFRs6rRRNznHf7WyvTeCn0xCPQwYCWXHzaAnDbNIoQv6XlWkNwry1AZRkESvXg8zqkmCYgY8STBZC1nk5El8yGCFUvSnUM4tDgMUh0cUQDiwcRjzHM5b4ZnvTLcLrZ5g5J8PrHe4zPxquj0BCHD3ghUb0oxSqLALTI0qmfGtXuQ9yiAVL8Pq4lY7aSlvfcP2z5V9xTPOsgb5p6hNEGrj8BfswkXrva5pZ6YmD0nvv6GJhDLC0lbW20XWmVr9RR1XkHXUTmZx7DGvrKoG8SOJnKuYWEoHstqNr11LvowKPuKNEzKN4Octy8kH9yFu3Y007qz5cINSXuJajuuUHcVnK1z45cUikeSwbffBVr2tugmEsMbgZKuNTMgzpu2juK0AQ7Y0N4CNgaXTv96vR0Kr2iBeMGnGlBQ8tSjf6cizPbGQrLkRs96VR8Xp6r3b0i08ywapEAPv38eQHWvu093JZcUTpmp13VzeJK9mvphaYWQmaFJU9i8qkRrI5crFItCh0Z4BSEkvlJwwFMhtQv78AzDjWzfbxDaVS1XSk2p5REDS3PmGx9vQts7W90rJuSxsEiLbNS4hNjKx1YeuvCinoTkhwcAEqx4gpBJT7ucRaNHooOK7eEPM03WzSUne2efWfK6MQrNhXD78N9elDYww";
     std::string toEncrypt = "AllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainx";
@@ -206,18 +204,26 @@ int main(int argc, char* argv[]) {
     aToEncrypt.length = toEncrypt.length();
 
 
-    /*
+    //Generating key and IV
+    generateRandomBuffer(key, sizeof(key));
+    generateRandomBuffer(initVector, sizeof(initVector));
+
+    //AESData aAESData;
+    //memcpy(aAESData.key, key, keyLength);
+    //memcpy(aAESData.initVector, initVector, ivLength);
+
     //Encrypting
     Data aEncryptedData;
     AESData aAESData;
-    envelope_seal(&privateKey, aToEncrypt, aEncryptedData, aAESData);
-    */
-    //Encrypting
-    Data aEncryptedData;
     start = std::chrono::high_resolution_clock::now();
-    encrypt(aAESData, aToEncrypt, aEncryptedData);
+    envelope_seal(&publicKey, aToEncrypt, aEncryptedData, aAESData);
     end = std::chrono::system_clock::now();
     encryptionMicro = end - start;
+    /*
+    //Encrypting
+    Data aEncryptedData;
+    encrypt(aAESData, aToEncrypt, aEncryptedData);
+    */
 
     //Signing
     Data aSignatureData;
@@ -229,7 +235,7 @@ int main(int argc, char* argv[]) {
 
     //Verifying
     start = std::chrono::high_resolution_clock::now();
-    bool verified= verify(publicKey, aEncryptedData, aSignatureData);
+    bool verified = verify(publicKey, aEncryptedData, aSignatureData);
     end = std::chrono::system_clock::now();
     verifyingMicro = end - start;
 
@@ -239,19 +245,18 @@ int main(int argc, char* argv[]) {
     else
         std::cout << "[NOT] Signature *not* VERIFIED! [NOT]" << std::endl;
 
-    /*
-    //Decryption
-    Data aDecryptedData;
-    envelope_open(publicKey, aEncryptedData, aDecryptedData, aAESData);
-    */
-
     //Decryption
     Data aDecryptedData;
     start = std::chrono::high_resolution_clock::now();
-    decrypt(aAESData, aEncryptedData, aDecryptedData);
+    envelope_open(privateKey, aEncryptedData, aDecryptedData, aAESData);
     end = std::chrono::system_clock::now();
     decryptionMicro = end - start;
 
+/*
+    //Decryption
+    Data aDecryptedData;
+    decrypt(aAESData, aEncryptedData, aDecryptedData);
+*/
     std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
     //std::string decryptedDataStr = std::string((const char*)decryptedData).substr(0, totLengthDecr);
     std::cout << "This after decryption: " << decryptedDataStr << std::endl;
@@ -259,6 +264,9 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Encryption time in microseconds: " << encryptionMicro.count() << " Decryption Time in microseconds: " << decryptionMicro.count() << std::endl;
     std::cout << "Signing time in microseconds: " << signingMicro.count() << " Verifying Time in microseconds: " << verifyingMicro.count() << std::endl;
+
+    EVP_PKEY_free(publicKey);
+    EVP_PKEY_free(privateKey);
 
     return 0;
 }
