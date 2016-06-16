@@ -177,6 +177,8 @@ void encryptRSA(EVP_PKEY* publicKey, const Data& toEncrypt, Data& oEncryptedData
 
     if (1 != EVP_PKEY_encrypt(ctx, oEncryptedData.data, &oEncryptedData.length, toEncrypt.data, toEncrypt.length))
         errorHandle();
+
+    //Cleanup needed
 }
 
 void decryptRSA(EVP_PKEY* privateKey, const Data& toDecrypt, Data& oDecryptedData) {
@@ -193,6 +195,63 @@ void decryptRSA(EVP_PKEY* privateKey, const Data& toDecrypt, Data& oDecryptedDat
 
     if (1 != EVP_PKEY_decrypt(ctx, oDecryptedData.data, &oDecryptedData.length, toDecrypt.data, toDecrypt.length))
         errorHandle();
+
+    //Cleanup needed
+}
+
+void clientSendHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAESData, const Data& dataToSend, Data&
+oEncryptedData, Data& oSignatureData) {
+    std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+    std::chrono::duration<double,std::micro> encryptionMicro, signingMicro, verifyingMicro, decryptionMicro;
+    unsigned char key[keyLength];
+    unsigned char initVector[EVP_MAX_IV_LENGTH];
+
+    //Generating key and IV
+    generateRandomBuffer(key, sizeof(key));
+    generateRandomBuffer(initVector, sizeof(initVector));
+
+    memcpy(oAESData.key, key, keyLength);
+    memcpy(oAESData.initVector, initVector, EVP_MAX_IV_LENGTH);
+
+    //Encrypting Message Data
+    start = std::chrono::high_resolution_clock::now();
+    encryptAES(oAESData, dataToSend, oEncryptedData);
+    end = std::chrono::high_resolution_clock::now();
+    encryptionMicro = end - start;
+
+    //Signing
+    Data aSignatureData;
+    start = std::chrono::high_resolution_clock::now();
+    sign(privateKey, oEncryptedData, oSignatureData);
+    end = std::chrono::high_resolution_clock::now();
+    signingMicro = end - start;
+
+    std::cout << "Encryption time in microseconds: " << encryptionMicro.count() << std::endl << "Signing time in microseconds: " << signingMicro.count() << std::endl;
+}
+
+void serverReceiveHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& iAESData, const Data& signatureData, const Data& receivedData) {
+    std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+    std::chrono::duration<double,std::micro> encryptionMicro, signingMicro, verifyingMicro, decryptionMicro;
+
+    //Verifying
+    start = std::chrono::high_resolution_clock::now();
+    bool verified = verify(publicKey, receivedData, signatureData);
+    end = std::chrono::high_resolution_clock::now();
+    verifyingMicro = end - start;
+
+    if (verified)
+        std::cout << "Signature VERIFIED!" << std::endl;
+    else
+        std::cout << "[NOT] Signature *not* VERIFIED! [NOT]" << std::endl;
+
+    //Decryption
+    Data aDecryptedData;
+    start = std::chrono::high_resolution_clock::now();
+    decryptAES(iAESData, receivedData, aDecryptedData);
+    end = std::chrono::high_resolution_clock::now();
+    decryptionMicro = end - start;
+
+    std::cout << "Verifying Time in microseconds: " << verifyingMicro.count() << std::endl << "Decryption Time in microseconds: " << decryptionMicro.count() << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -233,31 +292,28 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    Data aToEncrypt;
-    memcpy(aToEncrypt.data, toEncrypt.c_str(), toEncrypt.length());
-    aToEncrypt.length = toEncrypt.length();
-
-
-    //Generating key and IV
-    generateRandomBuffer(key, sizeof(key));
-    generateRandomBuffer(initVector, sizeof(initVector));
+    Data aToSend;
+    memcpy(aToSend.data, toEncrypt.c_str(), toEncrypt.length());
+    aToSend.length = toEncrypt.length();
 
     //AESData aAESData;
-    //memcpy(aAESData.key, key, keyLength);
-    //memcpy(aAESData.initVector, initVector, ivLength);
+
+    //clientSendHomeMade(publicKey, privateKey, aAESData, aToSend);
+
+    //serverReceiveHomeMade(publicKey, privateKey, aAESData, 
 
     //Encrypting
     Data aEncryptedData;
     AESData aAESData;
     start = std::chrono::high_resolution_clock::now();
-    envelope_seal(&publicKey, aToEncrypt, aEncryptedData, aAESData);
+    envelope_seal(&publicKey, aToSend, aEncryptedData, aAESData);
     end = std::chrono::high_resolution_clock::now();
     encryptionMicro = end - start;
     /*
     //Encrypting
     Data aEncryptedData;
     start = std::chrono::high_resolution_clock::now();
-    encryptAES(aAESData, aToEncrypt, aEncryptedData);
+    encryptAES(aAESData, aToSend, aEncryptedData);
     end = std::chrono::high_resolution_clock::now();
     encryptionMicro = end - start;
     */
