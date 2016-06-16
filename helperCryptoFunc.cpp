@@ -5,6 +5,7 @@
 
 #include <openssl/rand.h>
 #include <openssl/evp.h>
+#include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/err.h>
 
@@ -83,7 +84,7 @@ void envelope_open(EVP_PKEY* privateKey, const Data& encryptedData, Data& oDecry
     EVP_CIPHER_CTX_free(ctx);
 }
 
-void encrypt(const AESData& iAESData, const Data& toEncrypt, Data& oEncryptedData) {
+void encryptAES(const AESData& iAESData, const Data& toEncrypt, Data& oEncryptedData) {
     //Initialization of cipher context
     EVP_CIPHER_CTX* cipherCtx = EVP_CIPHER_CTX_new();
 
@@ -104,7 +105,7 @@ void encrypt(const AESData& iAESData, const Data& toEncrypt, Data& oEncryptedDat
     EVP_CIPHER_CTX_free(cipherCtx);
 }
 
-void decrypt(const AESData& iAESData, const Data& toDecrypt, Data& oDecryptedData) {
+void decryptAES(const AESData& iAESData, const Data& toDecrypt, Data& oDecryptedData) {
     //Initialization of cipher context
     EVP_CIPHER_CTX* cipherCtx = EVP_CIPHER_CTX_new();
     EVP_CIPHER_CTX_set_padding(cipherCtx, 1);
@@ -159,6 +160,39 @@ bool verify(EVP_PKEY* publicKey, const Data& signedData, const Data& signatureDa
 
     return ret;
     //END: Message Verifying operation
+}
+
+//Assumes public key in input
+void encryptRSA(EVP_PKEY* publicKey, const Data& toEncrypt, Data& oEncryptedData) {
+    EVP_PKEY_CTX* ctx;
+    ctx = EVP_PKEY_CTX_new(publicKey, NULL);
+    if (!ctx)
+        errorHandle();
+
+    if (1 != EVP_PKEY_encrypt_init(ctx))
+        errorHandle();
+
+    if (1 != EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING))
+        errorHandle();
+
+    if (1 != EVP_PKEY_encrypt(ctx, oEncryptedData.data, &oEncryptedData.length, toEncrypt.data, toEncrypt.length))
+        errorHandle();
+}
+
+void decryptRSA(EVP_PKEY* privateKey, const Data& toDecrypt, Data& oDecryptedData) {
+    EVP_PKEY_CTX* ctx;
+    ctx = EVP_PKEY_CTX_new(privateKey, NULL);
+    if (!ctx)
+        errorHandle();
+
+    if (1 != EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING))
+        errorHandle();
+
+    if (1 != EVP_PKEY_decrypt_init(ctx))
+        errorHandle();
+
+    if (1 != EVP_PKEY_decrypt(ctx, oDecryptedData.data, &oDecryptedData.length, toDecrypt.data, toDecrypt.length))
+        errorHandle();
 }
 
 int main(int argc, char* argv[]) {
@@ -217,26 +251,29 @@ int main(int argc, char* argv[]) {
     AESData aAESData;
     start = std::chrono::high_resolution_clock::now();
     envelope_seal(&publicKey, aToEncrypt, aEncryptedData, aAESData);
-    end = std::chrono::system_clock::now();
+    end = std::chrono::high_resolution_clock::now();
     encryptionMicro = end - start;
     /*
     //Encrypting
     Data aEncryptedData;
-    encrypt(aAESData, aToEncrypt, aEncryptedData);
+    start = std::chrono::high_resolution_clock::now();
+    encryptAES(aAESData, aToEncrypt, aEncryptedData);
+    end = std::chrono::high_resolution_clock::now();
+    encryptionMicro = end - start;
     */
 
     //Signing
     Data aSignatureData;
     start = std::chrono::high_resolution_clock::now();
     sign(privateKey, aEncryptedData, aSignatureData);
-    end = std::chrono::system_clock::now();
+    end = std::chrono::high_resolution_clock::now();
     signingMicro = end - start;
 
 
     //Verifying
     start = std::chrono::high_resolution_clock::now();
     bool verified = verify(publicKey, aEncryptedData, aSignatureData);
-    end = std::chrono::system_clock::now();
+    end = std::chrono::high_resolution_clock::now();
     verifyingMicro = end - start;
 
 
@@ -249,13 +286,16 @@ int main(int argc, char* argv[]) {
     Data aDecryptedData;
     start = std::chrono::high_resolution_clock::now();
     envelope_open(privateKey, aEncryptedData, aDecryptedData, aAESData);
-    end = std::chrono::system_clock::now();
+    end = std::chrono::high_resolution_clock::now();
     decryptionMicro = end - start;
 
 /*
     //Decryption
     Data aDecryptedData;
-    decrypt(aAESData, aEncryptedData, aDecryptedData);
+    start = std::chrono::high_resolution_clock::now();
+    decryptAES(aAESData, aEncryptedData, aDecryptedData);
+    end = std::chrono::high_resolution_clock::now();
+    decryptionMicro = end - start;
 */
     std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
     //std::string decryptedDataStr = std::string((const char*)decryptedData).substr(0, totLengthDecr);
