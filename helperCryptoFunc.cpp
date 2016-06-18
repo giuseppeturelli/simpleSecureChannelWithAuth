@@ -178,7 +178,7 @@ void encryptRSA(EVP_PKEY* publicKey, const Data& toEncrypt, Data& oEncryptedData
     if (1 != EVP_PKEY_encrypt(ctx, oEncryptedData.data, (size_t*) &oEncryptedData.length, toEncrypt.data, (size_t) toEncrypt.length))
         errorHandle();
 
-    //Cleanup needed
+    EVP_PKEY_CTX_free(ctx);
 }
 
 void decryptRSA(EVP_PKEY* privateKey, const Data& toDecrypt, Data& oDecryptedData) {
@@ -187,21 +187,21 @@ void decryptRSA(EVP_PKEY* privateKey, const Data& toDecrypt, Data& oDecryptedDat
     if (!ctx)
         errorHandle();
 
-    if (1 != EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING))
+    if (1 != EVP_PKEY_decrypt_init(ctx))
         errorHandle();
 
-    if (1 != EVP_PKEY_decrypt_init(ctx))
+    if (1 != EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING))
         errorHandle();
 
     if (1 != EVP_PKEY_decrypt(ctx, oDecryptedData.data, (size_t*) &oDecryptedData.length, toDecrypt.data, (size_t) toDecrypt.length))
         errorHandle();
 
-    //Cleanup needed
+    EVP_PKEY_CTX_free(ctx);
 }
 
 void clientSendHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAESData, const Data& dataToSend, Data& oEncryptedData, Data& oSignatureData) {
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
-    std::chrono::duration<double,std::micro> encryptionMicro, signingMicro;
+    std::chrono::duration<double,std::micro> encryptionMicro, encryptionRSAMicro, signingMicro;
     unsigned char key[keyLength];
     unsigned char initVector[EVP_MAX_IV_LENGTH];
 
@@ -209,7 +209,20 @@ void clientSendHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAES
     generateRandomBuffer(key, sizeof(key));
     generateRandomBuffer(initVector, sizeof(initVector));
 
-    memcpy(oAESData.key, key, keyLength);
+    Data toEncryptAESData;
+    memcpy(toEncryptAESData.data, key, keyLength);
+
+    Data encryptedAESData;
+    encryptedAESData.length = bufferLength;
+
+    //Encrypting Key Data
+    start = std::chrono::high_resolution_clock::now();
+    encryptRSA(publicKey, toEncryptAESData, encryptedAESData);
+    end = std::chrono::high_resolution_clock::now();
+    encryptionRSAMicro = end - start;
+
+    memcpy(oAESData.key, encryptedAESData.data, encryptedAESData.length);
+    oAESData.length = encryptedAESData.length;
     memcpy(oAESData.initVector, initVector, EVP_MAX_IV_LENGTH);
 
     //Encrypting Message Data
@@ -225,12 +238,12 @@ void clientSendHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAES
     end = std::chrono::high_resolution_clock::now();
     signingMicro = end - start;
 
-    std::cout << "Encryption time in microseconds: " << encryptionMicro.count() << std::endl << "Signing time in microseconds: " << signingMicro.count() << std::endl;
+    std::cout << "EncryptionRSA time in microseconds: " << encryptionRSAMicro.count() << std::endl << "EncryptionAES time in microseconds: " << encryptionMicro.count() << std::endl << "Signing time in microseconds: " << signingMicro.count() << std::endl;
 }
 
 void serverReceiveHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData) {
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
-    std::chrono::duration<double,std::micro> verifyingMicro, decryptionMicro;
+    std::chrono::duration<double,std::micro> verifyingMicro, decryptionMicro, decryptionRSAMicro;
 
     //Verifying
     start = std::chrono::high_resolution_clock::now();
@@ -243,13 +256,29 @@ void serverReceiveHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& i
     else
         std::cout << "[NOT] Signature *not* VERIFIED! [NOT]" << std::endl;
 
+    Data decryptedAESData;
+    decryptedAESData.length = bufferLength;
+
+    Data encryptedAESData;
+    memcpy(encryptedAESData.data, iAESData.key, iAESData.length);
+    encryptedAESData.length = iAESData.length; 
+
+    //Decrypting Key Data
+    start = std::chrono::high_resolution_clock::now();
+    decryptRSA(privateKey, encryptedAESData, decryptedAESData);
+    end = std::chrono::high_resolution_clock::now();
+    decryptionRSAMicro = end - start;
+
+    memcpy(iAESData.key, decryptedAESData.data, decryptedAESData.length);
+    iAESData.length = decryptedAESData.length;
+
     //Decryption
     start = std::chrono::high_resolution_clock::now();
     decryptAES(iAESData, receivedData, oDecryptedData);
     end = std::chrono::high_resolution_clock::now();
     decryptionMicro = end - start;
 
-    std::cout << "Verifying Time in microseconds: " << verifyingMicro.count() << std::endl << "Decryption Time in microseconds: " << decryptionMicro.count() << std::endl;
+    std::cout << "Verifying Time in microseconds: " << verifyingMicro.count() << std::endl << "DecryptionRSA Time in microseconds: " << decryptionRSAMicro.count() << std::endl << "Decryption Time in microseconds: " << decryptionMicro.count() << std::endl;
 }
 
 void clientSendEnvelope(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAESData, const Data& dataToSend, Data& oEncryptedData, Data& oSignatureData) {
@@ -346,22 +375,25 @@ int main(int argc, char* argv[]) {
     Data aEncryptedData;
     Data aDecryptedData;
 
-    std::cout << "------------------HomeMade version------------------" << std::endl;
-    clientSendHomeMade(publicKey, privateKey, aAESData, aToSend, aEncryptedData, aSignatureData);
-    serverReceiveHomeMade(publicKey, privateKey, aAESData, aSignatureData, aEncryptedData, aDecryptedData);
-
-    std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
-    std::cout << "This after decryption: " << decryptedDataStr << std::endl;
-
-    aEncryptedData.length = 0;
-    aDecryptedData.length = 0;
-
     std::cout << "------------------Envelope version------------------" << std::endl;
     clientSendEnvelope(publicKey, privateKey, aAESData, aToSend, aEncryptedData, aSignatureData);
     serverReceiveEnvelope(publicKey, privateKey, aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
+    std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
+    std::cout << "This after decryption: " << decryptedDataStr << std::endl;
+ 
+    memset(aEncryptedData.data, 0, bufferLength);
+    aEncryptedData.length = 0;
+    memset(aDecryptedData.data, 0, bufferLength);
+    aDecryptedData.length = 0;
+
+    std::cout << "------------------HomeMade version------------------" << std::endl;
+    clientSendHomeMade(publicKey, privateKey, aAESData, aToSend, aEncryptedData, aSignatureData);
+    serverReceiveHomeMade(publicKey, privateKey, aAESData, aSignatureData, aEncryptedData, aDecryptedData);
+
     decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
     std::cout << "This after decryption: " << decryptedDataStr << std::endl;
+
     EVP_PKEY_free(publicKey);
     EVP_PKEY_free(privateKey);
 
