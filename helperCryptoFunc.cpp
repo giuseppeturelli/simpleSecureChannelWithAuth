@@ -345,86 +345,23 @@ int main(int argc, char* argv[]) {
     Data aSignatureData;
     Data aEncryptedData;
     Data aDecryptedData;
-/*
+
+    std::cout << "------------------HomeMade version------------------" << std::endl;
     clientSendHomeMade(publicKey, privateKey, aAESData, aToSend, aEncryptedData, aSignatureData);
     serverReceiveHomeMade(publicKey, privateKey, aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
     std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
     std::cout << "This after decryption: " << decryptedDataStr << std::endl;
 
-    memset(aAESData.key, 0, aAESData.length);
-    memset(aAESData.initVector, 0, EVP_MAX_IV_LENGTH);
-    memset(aSignatureData.data, 0, aSignatureData.length);
-    memset(aEncryptedData.data, 0, aEncryptedData.length);
-    memset(aDecryptedData.data, 0, aDecryptedData.length);
-*/
+    aEncryptedData.length = 0;
+    aDecryptedData.length = 0;
+
+    std::cout << "------------------Envelope version------------------" << std::endl;
     clientSendEnvelope(publicKey, privateKey, aAESData, aToSend, aEncryptedData, aSignatureData);
     serverReceiveEnvelope(publicKey, privateKey, aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
-    std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
+    decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
     std::cout << "This after decryption: " << decryptedDataStr << std::endl;
-    /*
-
-    //Encrypting
-    Data aEncryptedData;
-    AESData aAESData;
-    start = std::chrono::high_resolution_clock::now();
-    envelope_seal(&publicKey, aToSend, aEncryptedData, aAESData);
-    end = std::chrono::high_resolution_clock::now();
-    encryptionMicro = end - start;
-
-    //Encrypting
-    Data aEncryptedData;
-    start = std::chrono::high_resolution_clock::now();
-    encryptAES(aAESData, aToSend, aEncryptedData);
-    end = std::chrono::high_resolution_clock::now();
-    encryptionMicro = end - start;
-    
-
-    //Signing
-    Data aSignatureData;
-    start = std::chrono::high_resolution_clock::now();
-    sign(privateKey, aEncryptedData, aSignatureData);
-    end = std::chrono::high_resolution_clock::now();
-    signingMicro = end - start;
-
-
-    //Verifying
-    start = std::chrono::high_resolution_clock::now();
-    bool verified = verify(publicKey, aEncryptedData, aSignatureData);
-    end = std::chrono::high_resolution_clock::now();
-    verifyingMicro = end - start;
-
-
-    if (verified)
-        std::cout << "Signature VERIFIED!" << std::endl;
-    else
-        std::cout << "[NOT] Signature *not* VERIFIED! [NOT]" << std::endl;
-
-    //Decryption
-    Data aDecryptedData;
-    start = std::chrono::high_resolution_clock::now();
-    envelope_open(privateKey, aEncryptedData, aDecryptedData, aAESData);
-    end = std::chrono::high_resolution_clock::now();
-    decryptionMicro = end - start;
-
-
-    //Decryption
-    Data aDecryptedData;
-    start = std::chrono::high_resolution_clock::now();
-    decryptAES(aAESData, aEncryptedData, aDecryptedData);
-    end = std::chrono::high_resolution_clock::now();
-    decryptionMicro = end - start;
-
-    std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
-    //std::string decryptedDataStr = std::string((const char*)decryptedData).substr(0, totLengthDecr);
-    std::cout << "This after decryption: " << decryptedDataStr << std::endl;
-
-
-    std::cout << "Encryption time in microseconds: " << encryptionMicro.count() << " Decryption Time in microseconds: " << decryptionMicro.count() << std::endl;
-    std::cout << "Signing time in microseconds: " << signingMicro.count() << " Verifying Time in microseconds: " << verifyingMicro.count() << std::endl;
-    */
-
     EVP_PKEY_free(publicKey);
     EVP_PKEY_free(privateKey);
 
