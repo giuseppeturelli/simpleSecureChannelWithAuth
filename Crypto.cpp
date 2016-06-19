@@ -1,16 +1,12 @@
+#include "Crypto.h"
 #include <string.h>
 #include <iostream>
 #include <sys/timeb.h>
 #include <chrono>
+#include <vector>
 
 #include <openssl/rand.h>
-#include <openssl/evp.h>
-#include <openssl/rsa.h>
-#include <openssl/pem.h>
 #include <openssl/err.h>
-
-static const int bufferLength = 2048;
-static const int keyLength = 1024;
 
 void generateRandomBuffer(unsigned char ioRandBuffer[], int size) {
     RAND_bytes(ioRandBuffer, size);
@@ -23,18 +19,6 @@ void errorHandle() {
     std::cout << "Error value: " << error << std::endl;
     exit(1);
 }
-
-struct Data {
-    unsigned char data[bufferLength];
-    long unsigned int length = 0;
-    long unsigned int availableSpace = bufferLength;
-};
-
-struct AESData {
-    unsigned char key[keyLength];
-    unsigned char initVector[EVP_MAX_IV_LENGTH];
-    int length = 0;
-};
 
 void envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt, Data& oEncryptedData, AESData& oAESData) {
     EVP_CIPHER_CTX* ctx;
@@ -203,7 +187,7 @@ void clientSendHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAES
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
     std::chrono::duration<double,std::micro> encryptionMicro, encryptionRSAMicro, signingMicro;
     unsigned char key[keyLength];
-    unsigned char initVector[EVP_MAX_IV_LENGTH];
+    unsigned char initVector[bufferLength];
 
     //Generating key and IV
     generateRandomBuffer(key, sizeof(key));
@@ -223,7 +207,7 @@ void clientSendHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAES
 
     memcpy(oAESData.key, encryptedAESData.data, encryptedAESData.length);
     oAESData.length = encryptedAESData.length;
-    memcpy(oAESData.initVector, initVector, EVP_MAX_IV_LENGTH);
+    memcpy(oAESData.initVector, initVector, bufferLength);
 
     //Encrypting Message Data
     start = std::chrono::high_resolution_clock::now();
@@ -327,13 +311,13 @@ void serverReceiveEnvelope(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& i
     std::cout << "Verifying Time in microseconds: " << verifyingMicro.count() << std::endl << "Decryption Time in microseconds: " << decryptionMicro.count() << std::endl;
 }
 
-
+/*
 int main(int argc, char* argv[]) {
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
     std::chrono::duration<double,std::micro> encryptionMicro, signingMicro, verifyingMicro, decryptionMicro;
     int ret = -1;
     unsigned char key[keyLength];
-    unsigned char initVector[EVP_MAX_IV_LENGTH];
+    unsigned char initVector[bufferLength];
 
 
     //std::string toEncrypt = "u8bZgY4IB0CHtAxNTLpa8oCWji8kvAqFx07Mb3sptkBC9RPS3kOe3w4xVFvv77Go01LG2yXzk300yTTJxNNRzv5BDt2LeWcbqhKgIJli1gjlpgy2yeueLaTrkOBMPKIWq1GNyv3E3k5u8kkQUzDumrUUvu6XZvBstOlWKcni2k3lHD382yaDhwvvPau8Acz7Uucaeg1hTr3G0VB2ESSVssAwzbGgS5OUfA24U2ifSOe4IncxWB8WJF9NXbytoM7gSbF2M20iPRUhtqnTDi4oQxDEUUiySCjKRh2kUNQ6Qv4tAfiMbtei6fOrxF6Ivb6oCCY0E2m2OuIOTPVrvVt0s8x2u6oiElyIwjG7oa70TvLEaFRs6rRRNznHf7WyvTeCn0xCPQwYCWXHzaAnDbNIoQv6XlWkNwry1AZRkESvXg8zqkmCYgY8STBZC1nk5El8yGCFUvSnUM4tDgMUh0cUQDiwcRjzHM5b4ZnvTLcLrZ5g5J8PrHe4zPxquj0BCHD3ghUb0oxSqLALTI0qmfGtXuQ9yiAVL8Pq4lY7aSlvfcP2z5V9xTPOsgb5p6hNEGrj8BfswkXrva5pZ6YmD0nvv6GJhDLC0lbW20XWmVr9RR1XkHXUTmZx7DGvrKoG8SOJnKuYWEoHstqNr11LvowKPuKNEzKN4Octy8kH9yFu3Y007qz5cINSXuJajuuUHcVnK1z45cUikeSwbffBVr2tugmEsMbgZKuNTMgzpu2juK0AQ7Y0N4CNgaXTv96vR0Kr2iBeMGnGlBQ8tSjf6cizPbGQrLkRs96VR8Xp6r3b0i08ywapEAPv38eQHWvu093JZcUTpmp13VzeJK9mvphaYWQmaFJU9i8qkRrI5crFItCh0Z4BSEkvlJwwFMhtQv78AzDjWzfbxDaVS1XSk2p5REDS3PmGx9vQts7W90rJuSxsEiLbNS4hNjKx1YeuvCinoTkhwcAEqx4gpBJT7ucRaNHooOK7eEPM03WzSUne2efWfK6MQrNhXD78N9elDYww";
@@ -399,4 +383,4 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-
+*/

@@ -1,7 +1,9 @@
 #include <ctime>
 #include <iostream>
 #include <string>
+#include <boost/array.hpp>
 #include <boost/asio.hpp>
+#include <iostream>
 
 using boost::asio::ip::tcp;
 
@@ -21,6 +23,11 @@ int main() {
             acceptor.accept(socket);
 
             std::string message = make_daytime_string();
+            boost::array<char, 1024> buf;
+            boost::system::error_code error;
+            size_t len = socket.read_some(boost::asio::buffer(buf), error);
+            std::string dataStr(buf.begin(), buf.end());
+            std::cout << "Sever Side: " << std::hex << dataStr << std::endl;
 
             boost::system::error_code ignored_error;
             boost::asio::write(socket, boost::asio::buffer(message), ignored_error);
