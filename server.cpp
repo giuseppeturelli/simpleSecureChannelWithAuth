@@ -1,6 +1,5 @@
 #include <ctime>
 #include <iostream>
-#include <string>
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
 #include <iostream>
@@ -19,34 +18,11 @@ int main() {
 
         tcp::acceptor acceptor(io_service, tcp::endpoint(tcp::v4(), 1300));
 
-        //Getting RSA Private key
-        FILE* fp;
         EVP_PKEY* privateKey;
-
-        if ((fp = fopen("/etc/ssh/ssh_host_rsa_key", "r")) != NULL) {
-            privateKey = PEM_read_PrivateKey(fp, NULL, 0, NULL);
-            if (privateKey == NULL)
-                errorHandle();
-            std::cout << "Loaded Private RSA key!" << std::endl;
-            fclose(fp);
-        } else {
-            std::cout << "Private RSA key missing, exiting!" << std::endl;
-        }
-        //Getting RSA Public key
         EVP_PKEY* publicKey;
 
-        if ((fp = fopen("/etc/ssh/ssh_host_rsa_key_pub", "r")) != NULL) {
-            publicKey = PEM_read_PUBKEY(fp, NULL, 0, NULL);
-            if (publicKey == NULL)
-                errorHandle();
-
-            std::cout << "Loaded Public RSA key!" << std::endl;
-            fclose(fp);
-        } else {
-            std::cout << "Public RSA key missing, exiting!" << std::endl;
-            exit(1);
-        }
-
+        privateKey = getPrivateKey();
+        publicKey = getPublicKey();
         while (true) {
             tcp::socket socket(io_service);
             acceptor.accept(socket);

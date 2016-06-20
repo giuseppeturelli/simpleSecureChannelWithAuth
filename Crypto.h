@@ -1,9 +1,18 @@
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
+#include <string>
 
 static const int bufferLength = 2048;
 static const int keyLength = 1024;
+static const std::string privFile = "/etc/ssh/ssh_host_rsa_key";
+static const std::string pubFile = "/etc/ssh/ssh_host_rsa_key_pub";
+
+//Getting RSA keypair
+
+EVP_PKEY* getPrivateKey();
+EVP_PKEY* getPublicKey();
+static const std::string toEncrypt = "AllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainx++";
 
 struct Data {
     unsigned char data[bufferLength];
