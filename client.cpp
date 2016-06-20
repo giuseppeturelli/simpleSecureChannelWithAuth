@@ -12,7 +12,8 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
-        std::string toEncrypt = "AllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainx";
+        std::string toEncrypt =
+        "AllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainx++";
         //Getting RSA Private key
         FILE* fp;
         EVP_PKEY* privateKey;
@@ -52,7 +53,6 @@ int main(int argc, char* argv[]) {
         std::cout << "------------------Client preparing Data To send Envelope------------------" << std::endl;
         clientSendEnvelope(publicKey, privateKey, aAESData, aToSend, aEncryptedData, aSignatureData);
 
-
         boost::asio::io_service io_service;
 
         tcp::resolver resolver(io_service);
@@ -62,22 +62,35 @@ int main(int argc, char* argv[]) {
         tcp::socket socket(io_service);
         boost::asio::connect(socket, endpoint_iterator);
 
-        while (true) {
-            boost::array<char, 128> buf;
-            boost::system::error_code error;
+        boost::array<char, 128> buf;
+        boost::system::error_code error;
 
-            size_t lent = socket.write_some(boost::asio::buffer(aAESData.key));
-            std::cout << "Key client side: " << std::hex << aAESData.key << std::endl;
+        char lengthM[4];
 
-            size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
-            if (error == boost::asio::error::eof)
-                break;
-            else if (error)
-                throw boost::system::system_error(error);
+        std::sprintf(lengthM, "%4d", static_cast<int>(aAESData.length));
+        size_t len = socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*4));
+        len = socket.write_some(boost::asio::buffer(aAESData.key, aAESData.length));
 
-            std::cout.write(buf.data(), len);
-        }
+        len = socket.write_some(boost::asio::buffer(aAESData.initVector, bufferLength));
+
+        std::sprintf(lengthM, "%4d", static_cast<int>(aEncryptedData.length));
+        len = socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*4));
+        len = socket.write_some(boost::asio::buffer(aEncryptedData.data, aEncryptedData.length));
+
+        std::sprintf(lengthM, "%4d", static_cast<int>(aSignatureData.length));
+        len = socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*4));
+        len = socket.write_some(boost::asio::buffer(aSignatureData.data, aSignatureData.length));
+
+        len = socket.read_some(boost::asio::buffer(buf), error);
+
+        std::cout.write(buf.data(), len);
+
+        if (error == boost::asio::error::eof)
+            return 1;
+        else if (error)
+            throw boost::system::system_error(error);
+
     }
     catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
