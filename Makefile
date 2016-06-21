@@ -17,3 +17,6 @@ server: server.o Crypto.o
 
 client: client.o Crypto.o
 	$(CC) $(CFLAGS) client.o Crypto.o -lcrypto -lboost_system -lpthread -o client
+
+clean:
+	rm -rf *o

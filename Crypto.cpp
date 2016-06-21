@@ -22,6 +22,7 @@ EVP_PKEY* getPrivateKey() {
     }
     return privateKey;
 }
+
 EVP_PKEY* getPublicKey() {
     FILE* fp;
     EVP_PKEY* publicKey;

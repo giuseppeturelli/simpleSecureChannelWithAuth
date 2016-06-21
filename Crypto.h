@@ -5,8 +5,8 @@
 
 static const int bufferLength = 2048;
 static const int keyLength = 1024;
-static const std::string privFile = "/etc/ssh/ssh_host_rsa_key";
-static const std::string pubFile = "/etc/ssh/ssh_host_rsa_key_pub";
+static const std::string privFile = "./rsaKey4096";
+static const std::string pubFile = "./rsaKey4096_pub";
 
 //Getting RSA keypair
 
@@ -38,6 +38,8 @@ struct AESData {
         ar & length;
     }
 };
+
+void generateRandomBuffer(unsigned char ioRandBuffer[], int size);
 
 void errorHandle();
 
