@@ -14,6 +14,7 @@ int main(int argc, char* argv[]) {
         EVP_PKEY* privateKey;
         EVP_PKEY* publicKey;
 
+
         privateKey = getPrivateKey();
         publicKey = getPublicKey();
         Data aToSend;
@@ -24,7 +25,7 @@ int main(int argc, char* argv[]) {
         Data aSignatureData;
         Data aEncryptedData;
 
-        std::cout << "------------------Client preparing Data To send Envelope------------------" << std::endl;
+        std::cout << "Message Size: " << toEncrypt.length() << std::endl << "Message Content: " <<  toEncrypt << std::endl;
         clientSendEnvelope(publicKey, privateKey, aAESData, aToSend, aEncryptedData, aSignatureData);
 
         boost::asio::io_service io_service;

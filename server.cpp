@@ -27,6 +27,7 @@ int main() {
             tcp::socket socket(io_service);
             acceptor.accept(socket);
 
+            std::cout << std::endl <<  "---------------------------New Message Received---------------------------" << std::endl;
             std::string message = make_daytime_string();
             boost::array<char, 4> buf;
             boost::system::error_code error;
@@ -51,7 +52,7 @@ int main() {
             serverReceiveEnvelope(publicKey, privateKey, aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
             std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
-            std::cout << "This after decryption: " << decryptedDataStr << std::endl;
+            std::cout << "Decrypted Message Size: " << decryptedDataStr.length() << std::endl << "Decrypted Message Content: " <<  decryptedDataStr << std::endl;
 
 
 
