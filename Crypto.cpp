@@ -8,10 +8,10 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
-EVP_PKEY* getPrivateKey() {
+EVP_PKEY* getPrivateKey(std::string keyFilePath) {
     FILE* fp;
     EVP_PKEY* privateKey;
-    if ((fp = fopen(privFile.c_str(), "r")) != NULL) {
+    if ((fp = fopen(keyFilePath.c_str(), "r")) != NULL) {
         privateKey = PEM_read_PrivateKey(fp, NULL, 0, NULL);
         if (privateKey == NULL)
             errorHandle();
@@ -23,12 +23,12 @@ EVP_PKEY* getPrivateKey() {
     return privateKey;
 }
 
-EVP_PKEY* getPublicKey() {
+EVP_PKEY* getPublicKey(std::string keyFilePath) {
     FILE* fp;
     EVP_PKEY* publicKey;
     //Getting RSA Public key
 
-    if ((fp = fopen(pubFile.c_str(), "r")) != NULL) {
+    if ((fp = fopen(keyFilePath.c_str(), "r")) != NULL) {
         publicKey = PEM_read_PUBKEY(fp, NULL, 0, NULL);
         if (publicKey == NULL)
             errorHandle();

@@ -18,11 +18,14 @@ int main() {
 
         tcp::acceptor acceptor(io_service, tcp::endpoint(tcp::v4(), 1300));
 
-        EVP_PKEY* privateKey;
-        EVP_PKEY* publicKey;
+        EVP_PKEY* privateKey[3];
+        EVP_PKEY* publicKey[3];
 
-        privateKey = getPrivateKey();
-        publicKey = getPublicKey();
+        for (int i = 0; i < 3; i++) {
+            privateKey[i] = getPrivateKey(privFile[i]);
+            publicKey[i] = getPublicKey(pubFile[i]);
+        }
+
         while (true) {
             tcp::socket socket(io_service);
             acceptor.accept(socket);
@@ -31,6 +34,9 @@ int main() {
             std::string message = make_daytime_string();
             boost::array<char, 4> buf;
             boost::system::error_code error;
+
+            socket.read_some(boost::asio::buffer(buf, sizeof(char)*4), error);
+            int keyUsed = std::atoi(buf.data());
 
             AESData aAESData;
             socket.read_some(boost::asio::buffer(buf, sizeof(char)*4), error);
@@ -49,7 +55,7 @@ int main() {
             socket.read_some(boost::asio::buffer(aSignatureData.data, aSignatureData.length), error);
 
             Data aDecryptedData;
-            serverReceiveEnvelope(publicKey, privateKey, aAESData, aSignatureData, aEncryptedData, aDecryptedData);
+            serverReceiveEnvelope(publicKey[keyUsed], privateKey[keyUsed], aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
             std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
             std::cout << "Decrypted Message Size: " << decryptedDataStr.length() << std::endl << "Decrypted Message Content: " <<  decryptedDataStr << std::endl;
@@ -60,9 +66,11 @@ int main() {
             boost::asio::write(socket, boost::asio::buffer(message), ignored_error);
     }
 
-    EVP_PKEY_free(publicKey);
-    EVP_PKEY_free(privateKey);
-
+    //Never reached for the moment
+    for (int i = 0; i < 3; i++) {
+        EVP_PKEY_free(publicKey[i]);
+        EVP_PKEY_free(privateKey[i]);
+        }
     }
     catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
