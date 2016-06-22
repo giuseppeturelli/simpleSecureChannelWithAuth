@@ -7,8 +7,8 @@ using boost::asio::ip::tcp;
 
 int main(int argc, char* argv[]) {
     try {
-        if (argc != 2) {
-            std::cerr << "Usage: client <host>" << std::endl;
+        if (argc != 4) {
+            std::cerr << "Usage: client <host> #OfRepetitions SelectedKey" << std::endl;
             return 1;
         }
         EVP_PKEY* privateKey[3];
@@ -17,7 +17,11 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < 3; i++) {
             privateKey[i] = getPrivateKey(privFile[i]);
             publicKey[i] = getPublicKey(pubFile[i]);
+        }
+        int arg2 = std::atoi(argv[2]);
+        int arg3 = std::atoi(argv[3]);
 
+        for (int q = 0; q < arg2; q++) {
             Data aToSend;
             memcpy(aToSend.data, toEncrypt.c_str(), toEncrypt.length());
             aToSend.length = toEncrypt.length();
@@ -27,7 +31,7 @@ int main(int argc, char* argv[]) {
             Data aEncryptedData;
 
             std::cout << "Message Size: " << toEncrypt.length() << std::endl << "Message Content: " <<  toEncrypt << std::endl;
-            clientSendEnvelope(publicKey[i], privateKey[i], aAESData, aToSend, aEncryptedData, aSignatureData);
+            clientSendEnvelope(publicKey[arg3], privateKey[arg3], aAESData, aToSend, aEncryptedData, aSignatureData);
 
             boost::asio::io_service io_service;
 
@@ -44,7 +48,7 @@ int main(int argc, char* argv[]) {
             char lengthM[4];
 
 
-            std::sprintf(lengthM, "%4d", static_cast<int>(i));
+            std::sprintf(lengthM, "%4d", static_cast<int>(arg3));
             socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*4));
 
             std::sprintf(lengthM, "%4d", static_cast<int>(aAESData.length));
