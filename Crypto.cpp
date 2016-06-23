@@ -44,7 +44,7 @@ EVP_PKEY* getPublicKey(std::string keyFilePath) {
 
 void printAverage() {
     if (messagesReceived > 0)
-        std::cout << "Messages Handled: " << messagesReceived << std::endl;
+        std::cout << std::endl << "Messages Handled: " << messagesReceived << std::endl;
 
     if (!signTime.empty())
         std::cout << "Average Sign time microsec: " << std::accumulate(signTime.begin(), signTime.end(),
