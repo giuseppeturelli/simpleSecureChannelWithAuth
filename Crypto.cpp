@@ -15,7 +15,7 @@ EVP_PKEY* getPrivateKey(std::string keyFilePath) {
         privateKey = PEM_read_PrivateKey(fp, NULL, 0, NULL);
         if (privateKey == NULL)
             errorHandle();
-        std::cout << "Loaded Private RSA key!" << std::endl;
+        //std::cout << "Loaded Private RSA key!" << std::endl;
         fclose(fp);
     } else {
         std::cout << "Private RSA key missing, exiting!" << std::endl;
@@ -33,7 +33,7 @@ EVP_PKEY* getPublicKey(std::string keyFilePath) {
         if (publicKey == NULL)
             errorHandle();
 
-        std::cout << "Loaded Public RSA key!" << std::endl;
+        //std::cout << "Loaded Public RSA key!" << std::endl;
         fclose(fp);
     } else {
         std::cout << "Public RSA key missing, exiting!" << std::endl;
@@ -45,6 +45,7 @@ EVP_PKEY* getPublicKey(std::string keyFilePath) {
 void printAverage() {
     if (messagesReceived > 0)
         std::cout << "Messages Handled: " << messagesReceived << std::endl;
+
     if (!signTime.empty())
         std::cout << "Average Sign time microsec: " << std::accumulate(signTime.begin(), signTime.end(),
         0.0)/signTime.size() << std::endl;
@@ -345,6 +346,7 @@ void clientSendEnvelope(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAES
 void serverReceiveEnvelope(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData) {
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
     std::chrono::duration<double,std::micro> verifyingMicro, decryptionMicro;
+    messagesReceived++;
 
     //Verifying
     start = std::chrono::high_resolution_clock::now();

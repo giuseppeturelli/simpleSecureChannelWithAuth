@@ -44,7 +44,6 @@ int main() {
             tcp::socket socket(io_service);
             acceptor.accept(socket);
 
-            messagesReceived++;
             //std::cout << std::endl <<  "---------------------------New Message Received---------------------------" << std::endl;
             std::string message = make_daytime_string();
             boost::array<char, 4> buf;

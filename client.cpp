@@ -21,6 +21,11 @@ int main(int argc, char* argv[]) {
         int arg2 = std::atoi(argv[2]);
         int arg3 = std::atoi(argv[3]);
 
+        if (arg3 < 0 || arg3 > 2) {
+            std::cerr << "0, 1 or 2 are the keys available" << std::endl;
+            return 1;
+        }
+
         std::cout << "Message Size: " << toEncrypt.length() << std::endl;// << "Message Content: " <<  toEncrypt << std::endl;
         for (int q = 0; q < arg2; q++) {
             Data aToSend;
