@@ -3,9 +3,13 @@
 #include <openssl/pem.h>
 #include <string>
 #include <vector>
+#include <numeric>
 
 static const int bufferLength = 2048;
 static const int keyLength = 1024;
+
+static std::vector<float> signTime, encryptTime, decryptTime, verifyTime;
+static int messagesReceived = 0;
 
 static const std::vector<std::string> privFile = {"./rsaKey1024", "./rsaKey2048", "./rsaKey4096" };
 static const std::vector<std::string> pubFile = {"./rsaKey1024_pub", "./rsaKey2048_pub", "./rsaKey4096_pub"};
@@ -40,6 +44,8 @@ struct AESData {
         ar & length;
     }
 };
+
+void printAverage();
 
 void generateRandomBuffer(unsigned char ioRandBuffer[], int size);
 

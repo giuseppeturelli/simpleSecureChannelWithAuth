@@ -21,6 +21,7 @@ int main(int argc, char* argv[]) {
         int arg2 = std::atoi(argv[2]);
         int arg3 = std::atoi(argv[3]);
 
+        std::cout << "Message Size: " << toEncrypt.length() << std::endl;// << "Message Content: " <<  toEncrypt << std::endl;
         for (int q = 0; q < arg2; q++) {
             Data aToSend;
             memcpy(aToSend.data, toEncrypt.c_str(), toEncrypt.length());
@@ -30,7 +31,6 @@ int main(int argc, char* argv[]) {
             Data aSignatureData;
             Data aEncryptedData;
 
-            std::cout << "Message Size: " << toEncrypt.length() << std::endl << "Message Content: " <<  toEncrypt << std::endl;
             clientSendEnvelope(publicKey[arg3], privateKey[arg3], aAESData, aToSend, aEncryptedData, aSignatureData);
 
             boost::asio::io_service io_service;
@@ -46,7 +46,6 @@ int main(int argc, char* argv[]) {
             boost::system::error_code error;
 
             char lengthM[4];
-
 
             std::sprintf(lengthM, "%4d", static_cast<int>(arg3));
             socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*4));
@@ -67,14 +66,15 @@ int main(int argc, char* argv[]) {
 
             size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
-            std::cout.write(buf.data(), len);
+            //std::cout.write(buf.data(), len);
 
             if (error == boost::asio::error::eof)
                 return 1;
             else if (error)
                 throw boost::system::system_error(error);
 
-    }
+        }
+        printAverage();
     }
     catch (std::exception& e) {
         std::cerr << e.what() << std::endl;

@@ -1,5 +1,6 @@
 #include <ctime>
 #include <iostream>
+#include <signal.h>
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
 #include <iostream>
@@ -7,12 +8,25 @@
 
 using boost::asio::ip::tcp;
 
+void sigIntHandlerFunction(int s) {
+    printAverage();
+    exit(0);
+}
+
 std::string make_daytime_string() {
     std::time_t now = std::time(0);
     return std::ctime(&now);
 }
 
 int main() {
+
+    struct sigaction sigIntHandler;
+    sigIntHandler.sa_handler = sigIntHandlerFunction;
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+
+    sigaction(SIGINT, &sigIntHandler, NULL);
+
     try {
         boost::asio::io_service io_service;
 
@@ -30,7 +44,8 @@ int main() {
             tcp::socket socket(io_service);
             acceptor.accept(socket);
 
-            std::cout << std::endl <<  "---------------------------New Message Received---------------------------" << std::endl;
+            messagesReceived++;
+            //std::cout << std::endl <<  "---------------------------New Message Received---------------------------" << std::endl;
             std::string message = make_daytime_string();
             boost::array<char, 4> buf;
             boost::system::error_code error;
@@ -58,24 +73,16 @@ int main() {
             serverReceiveEnvelope(publicKey[keyUsed], privateKey[keyUsed], aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
             std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
-            std::cout << "Decrypted Message Size: " << decryptedDataStr.length() << std::endl << "Decrypted Message Content: " <<  decryptedDataStr << std::endl;
-
-
+            //std::cout << "Decrypted Message Size: " << decryptedDataStr.length() << std::endl << "Decrypted Message Content: " <<  decryptedDataStr << std::endl;
 
             boost::system::error_code ignored_error;
             boost::asio::write(socket, boost::asio::buffer(message), ignored_error);
-    }
-
-    //Never reached for the moment
-    for (int i = 0; i < 3; i++) {
-        EVP_PKEY_free(publicKey[i]);
-        EVP_PKEY_free(privateKey[i]);
         }
     }
+
     catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
-
 
     return 0;
 }

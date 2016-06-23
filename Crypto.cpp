@@ -42,6 +42,25 @@ EVP_PKEY* getPublicKey(std::string keyFilePath) {
     return publicKey;
 }
 
+void printAverage() {
+    if (messagesReceived > 0)
+        std::cout << "Messages Handled: " << messagesReceived << std::endl;
+    if (!signTime.empty())
+        std::cout << "Average Sign time microsec: " << std::accumulate(signTime.begin(), signTime.end(),
+        0.0)/signTime.size() << std::endl;
+
+    if (!encryptTime.empty())
+        std::cout << "Average Encrypt time microsec: " << std::accumulate(encryptTime.begin(), encryptTime.end(), 0.0)/encryptTime.size() << std::endl;
+
+    if (!decryptTime.empty())
+        std::cout << "Average Decrypt time microsec: " << std::accumulate(decryptTime.begin(), decryptTime.end(),
+        0.0)/decryptTime.size() << std::endl;
+
+    if (!verifyTime.empty())
+        std::cout << "Average Verify time microsec: " << std::accumulate(verifyTime.begin(), verifyTime.end(),
+        0.0)/verifyTime.size() << std::endl;
+}
+
 void generateRandomBuffer(unsigned char ioRandBuffer[], int size) {
     RAND_bytes(ioRandBuffer, size);
 }
@@ -269,9 +288,7 @@ void serverReceiveHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& i
     end = std::chrono::high_resolution_clock::now();
     verifyingMicro = end - start;
 
-    if (verified)
-        std::cout << "Signature VERIFIED!" << std::endl;
-    else
+    if (!verified)
         std::cout << "[NOT] Signature *not* VERIFIED! [NOT]" << std::endl;
 
     Data decryptedAESData;
@@ -311,6 +328,8 @@ void clientSendEnvelope(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAES
     end = std::chrono::high_resolution_clock::now();
     encryptionMicro = end - start;
 
+    encryptTime.push_back(encryptionMicro.count());
+
     //Signing
     Data aSignatureData;
     start = std::chrono::high_resolution_clock::now();
@@ -318,7 +337,9 @@ void clientSendEnvelope(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAES
     end = std::chrono::high_resolution_clock::now();
     signingMicro = end - start;
 
-    std::cout << "Encryption time in microseconds: " << encryptionMicro.count() << std::endl << "Signing time in microseconds: " << signingMicro.count() << std::endl;
+    signTime.push_back(signingMicro.count());
+
+    //std::cout << "Encryption time in microseconds: " << encryptionMicro.count() << std::endl << "Signing time in microseconds: " << signingMicro.count() << std::endl;
 }
 
 void serverReceiveEnvelope(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData) {
@@ -331,9 +352,9 @@ void serverReceiveEnvelope(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& i
     end = std::chrono::high_resolution_clock::now();
     verifyingMicro = end - start;
 
-    if (verified)
-        std::cout << "Signature VERIFIED!" << std::endl;
-    else
+    verifyTime.push_back(verifyingMicro.count());
+
+    if (!verified)
         std::cout << "[NOT] Signature *not* VERIFIED! [NOT]" << std::endl;
 
     //Decryption
@@ -342,7 +363,9 @@ void serverReceiveEnvelope(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& i
     end = std::chrono::high_resolution_clock::now();
     decryptionMicro = end - start;
 
-    std::cout << "Verifying Time in microseconds: " << verifyingMicro.count() << std::endl << "Decryption Time in microseconds: " << decryptionMicro.count() << std::endl;
+    decryptTime.push_back(decryptionMicro.count());
+
+    //std::cout << "Verifying Time in microseconds: " << verifyingMicro.count() << std::endl << "Decryption Time in microseconds: " << decryptionMicro.count() << std::endl;
 }
 
 /*
