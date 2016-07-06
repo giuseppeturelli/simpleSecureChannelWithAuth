@@ -6,6 +6,7 @@
 using boost::asio::ip::tcp;
 
 int main(int argc, char* argv[]) {
+    CryptoCollection crypto;
     try {
         if (argc != 4) {
             std::cerr << "Usage: client <host> #OfRepetitions SelectedKey" << std::endl;
@@ -15,8 +16,8 @@ int main(int argc, char* argv[]) {
         EVP_PKEY* publicKey[3];
 
         for (int i = 0; i < 3; i++) {
-            privateKey[i] = getPrivateKey(privFile[i]);
-            publicKey[i] = getPublicKey(pubFile[i]);
+            privateKey[i] = crypto.getPrivateKey(privFile[i]);
+            publicKey[i] = crypto.getPublicKey(pubFile[i]);
         }
         int arg2 = std::atoi(argv[2]);
         int arg3 = std::atoi(argv[3]);
@@ -36,7 +37,8 @@ int main(int argc, char* argv[]) {
             Data aSignatureData;
             Data aEncryptedData;
 
-            clientSendEnvelope(publicKey[arg3], privateKey[arg3], aAESData, aToSend, aEncryptedData, aSignatureData);
+
+            crypto.clientSendEnvelope(publicKey[arg3], privateKey[arg3], aAESData, aToSend, aEncryptedData, aSignatureData);
 
             boost::asio::io_service io_service;
 

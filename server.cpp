@@ -27,6 +27,7 @@ int main() {
 
     sigaction(SIGINT, &sigIntHandler, NULL);
 
+    CryptoCollection crypto;
     try {
         boost::asio::io_service io_service;
 
@@ -36,8 +37,10 @@ int main() {
         EVP_PKEY* publicKey[3];
 
         for (int i = 0; i < 3; i++) {
-            privateKey[i] = getPrivateKey(privFile[i]);
-            publicKey[i] = getPublicKey(pubFile[i]);
+            privateKey[i] = crypto.getPrivateKey(privFile[i]);
+            publicKey[i] = crypto.getPublicKey(pubFile[i]);
+            crypto.setPrivateKey(privFile[i]);
+            crypto.setPublicKey(pubFile[i]);
         }
 
         while (true) {
@@ -69,7 +72,7 @@ int main() {
             socket.read_some(boost::asio::buffer(aSignatureData.data, aSignatureData.length), error);
 
             Data aDecryptedData;
-            serverReceiveEnvelope(publicKey[keyUsed], privateKey[keyUsed], aAESData, aSignatureData, aEncryptedData, aDecryptedData);
+            crypto.serverReceiveEnvelope(publicKey[keyUsed], privateKey[keyUsed], aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
             std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
             //std::cout << "Decrypted Message Size: " << decryptedDataStr.length() << std::endl << "Decrypted Message Content: " <<  decryptedDataStr << std::endl;
