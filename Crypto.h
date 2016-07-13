@@ -48,34 +48,32 @@ void printAverage();
 
 class CryptoCollection {
     public:
-        EVP_PKEY* getPrivateKey(std::string keyFilePath);
-        EVP_PKEY* getPublicKey(std::string keyFilePath);
+        ~CryptoCollection();
 
         void setPrivateKey(const std::string& keyFilePath);
         void setPublicKey(const std::string& keyFilePath);
 
+        void encryptAES(const AESData& iAESData, const Data& toEncrypt, Data& oEncryptedData);
+        void decryptAES(const AESData& iAESData, const Data& toDecrypt, Data& oDecryptedData);
+
+        void sign(const Data& toSign, Data& oSignatureData);
+        bool verify(const Data& signedData, const Data& signatureData);
+
+        void encryptRSA(const Data& toEncrypt, Data& oEncryptedData);
+        void decryptRSA(const Data& toDecrypt, Data& oDecryptedData);
+
+        void sendHomeMade(AESData& oAESData, const Data& dataToSend, Data& oEncryptedData, Data& oSignatureData);
+        void receiveHomeMade(AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData);
+
+        void sendEnvelope(AESData& oAESData, const Data& dataToSend, Data& oEncryptedData, Data& oSignatureData);
+        void receiveEnvelope(AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData);
+    private:
         void generateRandomBuffer(unsigned char ioRandBuffer[], int size);
         void errorHandle();
 
         void envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt, Data& oEncryptedData, AESData& oAESData);
-        void envelope_open(EVP_PKEY* privateKey, const Data& encryptedData, Data& oDecryptedData, const AESData& iAESData);
+        void envelope_open(const Data& encryptedData, Data& oDecryptedData, const AESData& iAESData);
 
-        void encryptAES(const AESData& iAESData, const Data& toEncrypt, Data& oEncryptedData);
-        void decryptAES(const AESData& iAESData, const Data& toDecrypt, Data& oDecryptedData);
-
-        void sign(EVP_PKEY* privateKey, const Data& toSign, Data& oSignatureData);
-        bool verify(EVP_PKEY* publicKey, const Data& signedData, const Data& signatureData);
-
-        void encryptRSA(EVP_PKEY* publicKey, const Data& toEncrypt, Data& oEncryptedData);
-        void decryptRSA(EVP_PKEY* privateKey, const Data& toDecrypt, Data& oDecryptedData);
-
-        void clientSendHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAESData, const Data& dataToSend, Data& oEncryptedData, Data& oSignatureData);
-        void serverReceiveHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData);
-
-        void clientSendEnvelope(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAESData, const Data& dataToSend, Data& oEncryptedData, Data& oSignatureData);
-        void serverReceiveEnvelope(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData);
-
-   private:
-       EVP_PKEY* privateKey;
-       EVP_PKEY* publicKey;
+        EVP_PKEY* privateKey;
+        EVP_PKEY* publicKey;
 };

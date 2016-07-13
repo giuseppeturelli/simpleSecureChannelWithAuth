@@ -12,13 +12,7 @@ int main(int argc, char* argv[]) {
             std::cerr << "Usage: client <host> #OfRepetitions SelectedKey" << std::endl;
             return 1;
         }
-        EVP_PKEY* privateKey[3];
-        EVP_PKEY* publicKey[3];
 
-        for (int i = 0; i < 3; i++) {
-            privateKey[i] = crypto.getPrivateKey(privFile[i]);
-            publicKey[i] = crypto.getPublicKey(pubFile[i]);
-        }
         int arg2 = std::atoi(argv[2]);
         int arg3 = std::atoi(argv[3]);
 
@@ -26,6 +20,9 @@ int main(int argc, char* argv[]) {
             std::cerr << "0, 1 or 2 are the keys available" << std::endl;
             return 1;
         }
+
+        crypto.setPrivateKey(privFile[arg3]);
+        crypto.setPublicKey(pubFile[arg3]);
 
         std::cout << "Message Size: " << toEncrypt.length() << std::endl;// << "Message Content: " <<  toEncrypt << std::endl;
         for (int q = 0; q < arg2; q++) {
@@ -38,7 +35,7 @@ int main(int argc, char* argv[]) {
             Data aEncryptedData;
 
 
-            crypto.clientSendEnvelope(publicKey[arg3], privateKey[arg3], aAESData, aToSend, aEncryptedData, aSignatureData);
+            crypto.sendEnvelope(aAESData, aToSend, aEncryptedData, aSignatureData);
 
             boost::asio::io_service io_service;
 

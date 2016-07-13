@@ -33,16 +33,6 @@ int main() {
 
         tcp::acceptor acceptor(io_service, tcp::endpoint(tcp::v4(), 1300));
 
-        EVP_PKEY* privateKey[3];
-        EVP_PKEY* publicKey[3];
-
-        for (int i = 0; i < 3; i++) {
-            privateKey[i] = crypto.getPrivateKey(privFile[i]);
-            publicKey[i] = crypto.getPublicKey(pubFile[i]);
-            crypto.setPrivateKey(privFile[i]);
-            crypto.setPublicKey(pubFile[i]);
-        }
-
         while (true) {
             tcp::socket socket(io_service);
             acceptor.accept(socket);
@@ -72,7 +62,9 @@ int main() {
             socket.read_some(boost::asio::buffer(aSignatureData.data, aSignatureData.length), error);
 
             Data aDecryptedData;
-            crypto.serverReceiveEnvelope(publicKey[keyUsed], privateKey[keyUsed], aAESData, aSignatureData, aEncryptedData, aDecryptedData);
+            crypto.setPrivateKey(privFile[keyUsed]);
+            crypto.setPublicKey(pubFile[keyUsed]);
+            crypto.receiveEnvelope(aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
             std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
             //std::cout << "Decrypted Message Size: " << decryptedDataStr.length() << std::endl << "Decrypted Message Content: " <<  decryptedDataStr << std::endl;

@@ -12,21 +12,25 @@ void printAverage() {
     if (messagesReceived > 0)
         std::cout << std::endl << "Messages Handled: " << messagesReceived << std::endl;
 
-    if (!signTime.empty())
-        std::cout << "Average Sign time microsec: " << std::accumulate(signTime.begin(), signTime.end(),
-        0.0)/signTime.size() << std::endl;
-
     if (!encryptTime.empty())
         std::cout << "Average Encrypt time microsec: " << std::accumulate(encryptTime.begin(), encryptTime.end(), 0.0)/encryptTime.size() << std::endl;
 
-    if (!decryptTime.empty())
-        std::cout << "Average Decrypt time microsec: " << std::accumulate(decryptTime.begin(), decryptTime.end(),
-        0.0)/decryptTime.size() << std::endl;
+    if (!signTime.empty())
+        std::cout << "Average Sign time microsec: " << std::accumulate(signTime.begin(), signTime.end(), 0.0)/signTime.size() << std::endl;
 
     if (!verifyTime.empty())
-        std::cout << "Average Verify time microsec: " << std::accumulate(verifyTime.begin(), verifyTime.end(),
-        0.0)/verifyTime.size() << std::endl;
+        std::cout << "Average Verify time microsec: " << std::accumulate(verifyTime.begin(), verifyTime.end(), 0.0)/verifyTime.size() << std::endl;
+
+    if (!decryptTime.empty())
+        std::cout << "Average Decrypt time microsec: " << std::accumulate(decryptTime.begin(), decryptTime.end(), 0.0)/decryptTime.size() << std::endl;
+
 }
+
+CryptoCollection::~CryptoCollection() {
+    EVP_PKEY_free(publicKey);
+    EVP_PKEY_free(privateKey);
+}
+
 
 void CryptoCollection::setPrivateKey(const std::string& keyFilePath) {
     FILE* fp;
@@ -56,39 +60,6 @@ void CryptoCollection::setPublicKey(const std::string& keyFilePath) {
         std::cout << "Public RSA key missing, exiting!" << std::endl;
         exit(1);
     }
-}
-EVP_PKEY* CryptoCollection::getPrivateKey(std::string keyFilePath) {
-    FILE* fp;
-    EVP_PKEY* privateKey;
-    if ((fp = fopen(keyFilePath.c_str(), "r")) != NULL) {
-        privateKey = PEM_read_PrivateKey(fp, NULL, 0, NULL);
-        if (privateKey == NULL)
-            errorHandle();
-        //std::cout << "Loaded Private RSA key!" << std::endl;
-        fclose(fp);
-    } else {
-        std::cout << "Private RSA key missing, exiting!" << std::endl;
-    }
-    return privateKey;
-}
-
-EVP_PKEY* CryptoCollection::getPublicKey(std::string keyFilePath) {
-    FILE* fp;
-    EVP_PKEY* publicKey;
-    //Getting RSA Public key
-
-    if ((fp = fopen(keyFilePath.c_str(), "r")) != NULL) {
-        publicKey = PEM_read_PUBKEY(fp, NULL, 0, NULL);
-        if (publicKey == NULL)
-            errorHandle();
-
-        //std::cout << "Loaded Public RSA key!" << std::endl;
-        fclose(fp);
-    } else {
-        std::cout << "Public RSA key missing, exiting!" << std::endl;
-        exit(1);
-    }
-    return publicKey;
 }
 
 void CryptoCollection::generateRandomBuffer(unsigned char ioRandBuffer[], int size) {
@@ -130,7 +101,7 @@ void CryptoCollection::envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt
     EVP_CIPHER_CTX_free(ctx);
 }
 
-void CryptoCollection::envelope_open(EVP_PKEY* privateKey, const Data& encryptedData, Data& oDecryptedData, const AESData& iAESData) {
+void CryptoCollection::envelope_open(const Data& encryptedData, Data& oDecryptedData, const AESData& iAESData) {
     EVP_CIPHER_CTX* ctx;
     int partialLength = 0;
 
@@ -194,7 +165,7 @@ void CryptoCollection::decryptAES(const AESData& iAESData, const Data& toDecrypt
     EVP_CIPHER_CTX_free(cipherCtx);
 }
 
-void CryptoCollection::sign(EVP_PKEY* privateKey, const Data& toSign, Data& oSignatureData) {
+void CryptoCollection::sign(const Data& toSign, Data& oSignatureData) {
     //START: Message Signing operation
     EVP_MD_CTX* digestSignCtx = EVP_MD_CTX_create();
 
@@ -213,7 +184,7 @@ void CryptoCollection::sign(EVP_PKEY* privateKey, const Data& toSign, Data& oSig
     //END: Message Signing operation
 }
 
-bool CryptoCollection::verify(EVP_PKEY* publicKey, const Data& signedData, const Data& signatureData) {
+bool CryptoCollection::verify(const Data& signedData, const Data& signatureData) {
     //START: Message Verifying operation
     EVP_MD_CTX* digestSignCtx = EVP_MD_CTX_create();
     if (1 != EVP_DigestVerifyInit(digestSignCtx, NULL, EVP_sha256(), NULL, publicKey))
@@ -230,7 +201,7 @@ bool CryptoCollection::verify(EVP_PKEY* publicKey, const Data& signedData, const
 }
 
 //Assumes public key in input
-void CryptoCollection::encryptRSA(EVP_PKEY* publicKey, const Data& toEncrypt, Data& oEncryptedData) {
+void CryptoCollection::encryptRSA(const Data& toEncrypt, Data& oEncryptedData) {
     EVP_PKEY_CTX* ctx;
     ctx = EVP_PKEY_CTX_new(publicKey, NULL);
     if (!ctx)
@@ -248,7 +219,7 @@ void CryptoCollection::encryptRSA(EVP_PKEY* publicKey, const Data& toEncrypt, Da
     EVP_PKEY_CTX_free(ctx);
 }
 
-void CryptoCollection::decryptRSA(EVP_PKEY* privateKey, const Data& toDecrypt, Data& oDecryptedData) {
+void CryptoCollection::decryptRSA(const Data& toDecrypt, Data& oDecryptedData) {
     EVP_PKEY_CTX* ctx;
     ctx = EVP_PKEY_CTX_new(privateKey, NULL);
     if (!ctx)
@@ -266,7 +237,7 @@ void CryptoCollection::decryptRSA(EVP_PKEY* privateKey, const Data& toDecrypt, D
     EVP_PKEY_CTX_free(ctx);
 }
 
-void CryptoCollection::clientSendHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAESData, const Data& dataToSend, Data& oEncryptedData, Data& oSignatureData) {
+void CryptoCollection::sendHomeMade(AESData& oAESData, const Data& dataToSend, Data& oEncryptedData, Data& oSignatureData) {
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
     std::chrono::duration<double,std::micro> encryptionMicro, encryptionRSAMicro, signingMicro;
     unsigned char key[keyLength];
@@ -284,7 +255,7 @@ void CryptoCollection::clientSendHomeMade(EVP_PKEY* publicKey, EVP_PKEY* private
 
     //Encrypting Key Data
     start = std::chrono::high_resolution_clock::now();
-    encryptRSA(publicKey, toEncryptAESData, encryptedAESData);
+    encryptRSA(toEncryptAESData, encryptedAESData);
     end = std::chrono::high_resolution_clock::now();
     encryptionRSAMicro = end - start;
 
@@ -301,20 +272,20 @@ void CryptoCollection::clientSendHomeMade(EVP_PKEY* publicKey, EVP_PKEY* private
     //Signing
     Data aSignatureData;
     start = std::chrono::high_resolution_clock::now();
-    sign(privateKey, oEncryptedData, oSignatureData);
+    sign(oEncryptedData, oSignatureData);
     end = std::chrono::high_resolution_clock::now();
     signingMicro = end - start;
 
     std::cout << "EncryptionRSA time in microseconds: " << encryptionRSAMicro.count() << std::endl << "EncryptionAES time in microseconds: " << encryptionMicro.count() << std::endl << "Signing time in microseconds: " << signingMicro.count() << std::endl;
 }
 
-void CryptoCollection::serverReceiveHomeMade(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData) {
+void CryptoCollection::receiveHomeMade(AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData) {
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
     std::chrono::duration<double,std::micro> verifyingMicro, decryptionMicro, decryptionRSAMicro;
 
     //Verifying
     start = std::chrono::high_resolution_clock::now();
-    bool verified = verify(publicKey, receivedData, signatureData);
+    bool verified = verify(receivedData, signatureData);
     end = std::chrono::high_resolution_clock::now();
     verifyingMicro = end - start;
 
@@ -330,7 +301,7 @@ void CryptoCollection::serverReceiveHomeMade(EVP_PKEY* publicKey, EVP_PKEY* priv
 
     //Decrypting Key Data
     start = std::chrono::high_resolution_clock::now();
-    decryptRSA(privateKey, encryptedAESData, decryptedAESData);
+    decryptRSA(encryptedAESData, decryptedAESData);
     end = std::chrono::high_resolution_clock::now();
     decryptionRSAMicro = end - start;
 
@@ -346,7 +317,7 @@ void CryptoCollection::serverReceiveHomeMade(EVP_PKEY* publicKey, EVP_PKEY* priv
     std::cout << "Verifying Time in microseconds: " << verifyingMicro.count() << std::endl << "DecryptionRSA Time in microseconds: " << decryptionRSAMicro.count() << std::endl << "Decryption Time in microseconds: " << decryptionMicro.count() << std::endl;
 }
 
-void CryptoCollection::clientSendEnvelope(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& oAESData, const Data& dataToSend, Data& oEncryptedData, Data& oSignatureData) {
+void CryptoCollection::sendEnvelope(AESData& oAESData, const Data& dataToSend, Data& oEncryptedData, Data& oSignatureData) {
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
     std::chrono::duration<double,std::micro> encryptionMicro, signingMicro;
 
@@ -363,7 +334,7 @@ void CryptoCollection::clientSendEnvelope(EVP_PKEY* publicKey, EVP_PKEY* private
     //Signing
     Data aSignatureData;
     start = std::chrono::high_resolution_clock::now();
-    sign(privateKey, oEncryptedData, oSignatureData);
+    sign(oEncryptedData, oSignatureData);
     end = std::chrono::high_resolution_clock::now();
     signingMicro = end - start;
 
@@ -372,14 +343,14 @@ void CryptoCollection::clientSendEnvelope(EVP_PKEY* publicKey, EVP_PKEY* private
     //std::cout << "Encryption time in microseconds: " << encryptionMicro.count() << std::endl << "Signing time in microseconds: " << signingMicro.count() << std::endl;
 }
 
-void CryptoCollection::serverReceiveEnvelope(EVP_PKEY* publicKey, EVP_PKEY* privateKey, AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData) {
+void CryptoCollection::receiveEnvelope(AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData) {
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
     std::chrono::duration<double,std::micro> verifyingMicro, decryptionMicro;
     messagesReceived++;
 
     //Verifying
     start = std::chrono::high_resolution_clock::now();
-    bool verified = verify(publicKey, receivedData, signatureData);
+    bool verified = verify(receivedData, signatureData);
     end = std::chrono::high_resolution_clock::now();
     verifyingMicro = end - start;
 
@@ -390,7 +361,7 @@ void CryptoCollection::serverReceiveEnvelope(EVP_PKEY* publicKey, EVP_PKEY* priv
 
     //Decryption
     start = std::chrono::high_resolution_clock::now();
-    envelope_open(privateKey, receivedData, oDecryptedData, iAESData);
+    envelope_open(receivedData, oDecryptedData, iAESData);
     end = std::chrono::high_resolution_clock::now();
     decryptionMicro = end - start;
 
@@ -449,7 +420,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "------------------Envelope version------------------" << std::endl;
     clientSendEnvelope(publicKey, privateKey, aAESData, aToSend, aEncryptedData, aSignatureData);
-    serverReceiveEnvelope(publicKey, privateKey, aAESData, aSignatureData, aEncryptedData, aDecryptedData);
+    receiveEnvelope(publicKey, privateKey, aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
     std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
     std::cout << "This after decryption: " << decryptedDataStr << std::endl;
@@ -461,7 +432,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "------------------HomeMade version------------------" << std::endl;
     clientSendHomeMade(publicKey, privateKey, aAESData, aToSend, aEncryptedData, aSignatureData);
-    serverReceiveHomeMade(publicKey, privateKey, aAESData, aSignatureData, aEncryptedData, aDecryptedData);
+    receiveHomeMade(publicKey, privateKey, aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
     decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
     std::cout << "This after decryption: " << decryptedDataStr << std::endl;
