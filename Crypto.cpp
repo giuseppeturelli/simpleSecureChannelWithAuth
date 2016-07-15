@@ -62,7 +62,7 @@ void CryptoCollection::setPublicKey(const std::string& keyFilePath) {
     }
 }
 
-void CryptoCollection::generateRandomBuffer(unsigned char ioRandBuffer[], int size) {
+void CryptoCollection::generateRandomBuffer(unsigned char* ioRandBuffer, int size) {
     RAND_bytes(ioRandBuffer, size);
 }
 
