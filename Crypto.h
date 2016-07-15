@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <numeric>
+#include <boost/shared_ptr.hpp>
 
 static const int bufferLength = 2048;
 static const int keyLength = 1024;
@@ -14,15 +15,45 @@ static int messagesReceived = 0;
 static const std::vector<std::string> privFile = {"./rsaKey1024", "./rsaKey2048", "./rsaKey4096" };
 static const std::vector<std::string> pubFile = {"./rsaKey1024_pub", "./rsaKey2048_pub", "./rsaKey4096_pub"};
 
-struct Data {
-    unsigned char data[bufferLength];
-    long unsigned int length = 0;
+class Data {
+    public:
+        unsigned char* data;
+        long unsigned int length = 0;
+
+        Data() {
+            data = (unsigned char*) malloc(bufferLength*sizeof(unsigned char));
+            //length = bufferLength;
+        }
+
+        Data(int size) {
+            data = (unsigned char*) malloc(size*sizeof(unsigned char));
+            //length = size;
+        }
+
+        ~Data() {
+            free(data);
+        }
 };
 
-struct AESData {
-    unsigned char key[keyLength];
-    unsigned char initVector[EVP_MAX_IV_LENGTH];
-    int length = 0;
+class AESData {
+    public:
+        unsigned char* key;
+        unsigned char initVector[EVP_MAX_IV_LENGTH];
+        int length = 0;
+
+        AESData() {
+            key = (unsigned char*) malloc(keyLength*sizeof(unsigned char));
+            //length = bufferLength;
+        }
+
+        AESData(int size) {
+            key = (unsigned char*) malloc(size*sizeof(unsigned char));
+            //length = size;
+        }
+
+        ~AESData() {
+            free(key);
+        }
 };
 
 //Helper Functions
