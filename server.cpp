@@ -8,8 +8,10 @@
 
 using boost::asio::ip::tcp;
 
+CryptoCollection crypto;
+
 void sigIntHandlerFunction(int s) {
-    printAverage();
+    crypto.printAverage();
     exit(0);
 }
 
@@ -27,7 +29,6 @@ int main() {
 
     sigaction(SIGINT, &sigIntHandler, NULL);
 
-    CryptoCollection crypto;
     try {
         boost::asio::io_service io_service;
 
@@ -45,20 +46,23 @@ int main() {
             socket.read_some(boost::asio::buffer(buf, sizeof(char)*4), error);
             int keyUsed = std::atoi(buf.data());
 
-            AESData aAESData;
             socket.read_some(boost::asio::buffer(buf, sizeof(char)*4), error);
-            aAESData.length = std::atoi(buf.data());
-            socket.read_some(boost::asio::buffer(aAESData.key, aAESData.length), error);
-            socket.read_some(boost::asio::buffer(aAESData.initVector, bufferLength), error);
+            int length = std::atoi(buf.data());
 
-            Data aEncryptedData;
+            AESData aAESData(length);
+            socket.read_some(boost::asio::buffer(aAESData.key, aAESData.length), error);
+            socket.read_some(boost::asio::buffer(aAESData.initVector,  EVP_MAX_IV_LENGTH), error);
+
             socket.read_some(boost::asio::buffer(buf, sizeof(char)*4), error);
-            aEncryptedData.length = std::atoi(buf.data());
+            length = std::atoi(buf.data());
+
+            Data aEncryptedData(length);
             socket.read_some(boost::asio::buffer(aEncryptedData.data, aEncryptedData.length), error);
 
-            Data aSignatureData;
             socket.read_some(boost::asio::buffer(buf, sizeof(char)*4), error);
-            aSignatureData.length = std::atoi(buf.data());
+            length = std::atoi(buf.data());
+
+            Data aSignatureData(length);
             socket.read_some(boost::asio::buffer(aSignatureData.data, aSignatureData.length), error);
 
             Data aDecryptedData;

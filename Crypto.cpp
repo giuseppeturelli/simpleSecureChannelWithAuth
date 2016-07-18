@@ -8,7 +8,12 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
-void printAverage() {
+CryptoCollection::~CryptoCollection() {
+    EVP_PKEY_free(publicKey);
+    EVP_PKEY_free(privateKey);
+}
+
+void CryptoCollection::printAverage() {
     if (messagesReceived > 0)
         std::cout << std::endl << "Messages Handled: " << messagesReceived << std::endl;
 
@@ -25,12 +30,6 @@ void printAverage() {
         std::cout << "Average Decrypt time microsec: " << std::accumulate(decryptTime.begin(), decryptTime.end(), 0.0)/decryptTime.size() << std::endl;
 
 }
-
-CryptoCollection::~CryptoCollection() {
-    EVP_PKEY_free(publicKey);
-    EVP_PKEY_free(privateKey);
-}
-
 
 void CryptoCollection::setPrivateKey(const std::string& keyFilePath) {
     FILE* fp;

@@ -9,8 +9,6 @@
 static const int bufferLength = 2048;
 static const int keyLength = 1024;
 
-static std::vector<float> signTime, encryptTime, decryptTime, verifyTime;
-static int messagesReceived = 0;
 
 static const std::vector<std::string> privFile = {"./rsaKey1024", "./rsaKey2048", "./rsaKey4096" };
 static const std::vector<std::string> pubFile = {"./rsaKey1024_pub", "./rsaKey2048_pub", "./rsaKey4096_pub"};
@@ -27,7 +25,7 @@ class Data {
 
         Data(int size) {
             data = (unsigned char*) malloc(size*sizeof(unsigned char));
-            //length = size;
+            length = size;
         }
 
         ~Data() {
@@ -48,7 +46,7 @@ class AESData {
 
         AESData(int size) {
             key = (unsigned char*) malloc(size*sizeof(unsigned char));
-            //length = size;
+            length = size;
         }
 
         ~AESData() {
@@ -64,6 +62,8 @@ void printAverage();
 class CryptoCollection {
     public:
         ~CryptoCollection();
+
+        void printAverage();
 
         void setPrivateKey(const std::string& keyFilePath);
         void setPublicKey(const std::string& keyFilePath);
@@ -82,8 +82,8 @@ class CryptoCollection {
 
         void sendEnvelope(AESData& oAESData, const Data& dataToSend, Data& oEncryptedData, Data& oSignatureData);
         void receiveEnvelope(AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData);
-    private:
         void generateRandomBuffer(unsigned char* ioRandBuffer, int size);
+    private:
         void errorHandle();
 
         void envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt, Data& oEncryptedData, AESData& oAESData);
@@ -91,4 +91,6 @@ class CryptoCollection {
 
         EVP_PKEY* privateKey;
         EVP_PKEY* publicKey;
+        std::vector<float> signTime, encryptTime, decryptTime, verifyTime;
+        int messagesReceived = 0;
 };

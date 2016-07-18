@@ -26,16 +26,18 @@ int main(int argc, char* argv[]) {
         crypto.setPrivateKey(privFile[arg3]);
         crypto.setPublicKey(pubFile[arg3]);
 
-        std::cout << "Message Size: " << toEncrypt.length() << " bytes" << std::endl;// << "Message Content: " <<  toEncrypt << std::endl;
+        int toSendSize = toEncrypt.length();
+
+        std::cout << "Message Size: " << toSendSize << " bytes" << std::endl;// << "Message Content: " <<  toEncrypt << std::endl;
         for (int q = 0; q < arg2; q++) {
-            Data aToSend;
-            memcpy(aToSend.data, toEncrypt.c_str(), toEncrypt.length());
-            aToSend.length = toEncrypt.length();
+
+
+            Data aToSend(toSendSize);
+            crypto.generateRandomBuffer(aToSend.data, toSendSize);
 
             AESData aAESData;
-            Data aSignatureData;
             Data aEncryptedData;
-
+            Data aSignatureData;
 
             crypto.sendEnvelope(aAESData, aToSend, aEncryptedData, aSignatureData);
 
@@ -60,7 +62,7 @@ int main(int argc, char* argv[]) {
             socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*4));
             socket.write_some(boost::asio::buffer(aAESData.key, aAESData.length));
 
-            socket.write_some(boost::asio::buffer(aAESData.initVector, bufferLength));
+            socket.write_some(boost::asio::buffer(aAESData.initVector, EVP_MAX_IV_LENGTH));
 
             std::sprintf(lengthM, "%4d", static_cast<int>(aEncryptedData.length));
             socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*4));
@@ -72,15 +74,13 @@ int main(int argc, char* argv[]) {
 
             size_t len = socket.read_some(boost::asio::buffer(buf), error);
 
-            //std::cout.write(buf.data(), len);
-
             if (error == boost::asio::error::eof)
                 return 1;
             else if (error)
                 throw boost::system::system_error(error);
 
         }
-        printAverage();
+        crypto.printAverage();
     }
     catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
