@@ -1,12 +1,11 @@
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
-#include <string>
+#include <string.h>
 #include <vector>
 #include <numeric>
 #include <boost/shared_ptr.hpp>
 
-static const int bufferLength = 2048;
 static const int keyLength = 1024;
 
 
@@ -16,15 +15,13 @@ static const std::vector<std::string> pubFile = {"./rsaKey1024_pub", "./rsaKey20
 class Data {
     public:
         unsigned char* data;
-        long unsigned int length = 0;
+        long unsigned int length;
 
-        Data() {
-            data = (unsigned char*) malloc(bufferLength*sizeof(unsigned char));
-            //length = bufferLength;
-        }
+        Data() : data(NULL), length(0) {}
 
         Data(int size) {
             data = (unsigned char*) malloc(size*sizeof(unsigned char));
+            memset(data, 0, size);
             length = size;
         }
 
@@ -41,11 +38,13 @@ class AESData {
 
         AESData() {
             key = (unsigned char*) malloc(keyLength*sizeof(unsigned char));
+            memset(key, 0, keyLength);
             //length = bufferLength;
         }
 
         AESData(int size) {
             key = (unsigned char*) malloc(size*sizeof(unsigned char));
+            memset(key, 0, size);
             length = size;
         }
 

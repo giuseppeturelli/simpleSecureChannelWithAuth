@@ -7,6 +7,8 @@
 #include "Crypto.h"
 
 using boost::asio::ip::tcp;
+static const char alphanum[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
 
 CryptoCollection crypto;
 
@@ -46,6 +48,9 @@ int main() {
             socket.read_some(boost::asio::buffer(buf, sizeof(char)*4), error);
             int keyUsed = std::atoi(buf.data());
 
+            crypto.setPrivateKey(privFile[keyUsed]);
+            crypto.setPublicKey(pubFile[keyUsed]);
+
             socket.read_some(boost::asio::buffer(buf, sizeof(char)*4), error);
             int length = std::atoi(buf.data());
 
@@ -66,12 +71,14 @@ int main() {
             socket.read_some(boost::asio::buffer(aSignatureData.data, aSignatureData.length), error);
 
             Data aDecryptedData;
-            crypto.setPrivateKey(privFile[keyUsed]);
-            crypto.setPublicKey(pubFile[keyUsed]);
             crypto.receiveEnvelope(aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
-            std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
-            //std::cout << "Decrypted Message Size: " << decryptedDataStr.length() << std::endl << "Decrypted Message Content: " <<  decryptedDataStr << std::endl;
+            char* printData = (char*) malloc(aDecryptedData.length+1);
+            printData[aDecryptedData.length] = '\0';
+            memcpy(printData, aDecryptedData.data, aDecryptedData.length);
+            std::cout << "DecryptBufSize: " << aDecryptedData.length << " Decrypted Message Size: ";
+            printf("%s\n", printData);
+            //fflush(stdout);
 
             boost::system::error_code ignored_error;
             boost::asio::write(socket, boost::asio::buffer(message), ignored_error);

@@ -66,9 +66,9 @@ void CryptoCollection::generateRandomBuffer(unsigned char* ioRandBuffer, int siz
 }
 
 void CryptoCollection::errorHandle() {
-    char error[bufferLength];
+    char error[1024];
     ERR_load_crypto_strings();
-    ERR_error_string_n(ERR_get_error(), error, bufferLength);
+    ERR_error_string_n(ERR_get_error(), error, 1024);
     std::cout << "Error value: " << error << std::endl;
     exit(1);
 }
@@ -76,15 +76,19 @@ void CryptoCollection::errorHandle() {
 void CryptoCollection::envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt, Data& oEncryptedData, AESData& oAESData) {
     EVP_CIPHER_CTX* ctx;
     int partialLength = 0;
-    unsigned char* tempKey;
 
-    tempKey = (unsigned char *) malloc(EVP_PKEY_size(publicKey[0]));
+    oAESData.key = (unsigned char *) malloc(EVP_PKEY_size(publicKey[0]));
+    memset(oAESData.key, 0, EVP_PKEY_size(publicKey[0]));
 
     if(!(ctx = EVP_CIPHER_CTX_new()))
         errorHandle();
 
-    if (!EVP_SealInit(ctx, EVP_aes_128_cbc(), &tempKey, &oAESData.length, oAESData.initVector, publicKey, 1))
+    if (!EVP_SealInit(ctx, EVP_aes_128_cbc(), &oAESData.key, &oAESData.length, oAESData.initVector, publicKey, 1))
         errorHandle();
+
+    //Size discovery
+    oEncryptedData.data = (unsigned char *) malloc(toEncrypt.length + EVP_MAX_BLOCK_LENGTH);
+    memset(oEncryptedData.data, 0, toEncrypt.length + EVP_MAX_BLOCK_LENGTH);
 
     if (1 != EVP_SealUpdate(ctx, oEncryptedData.data, &partialLength, toEncrypt.data, toEncrypt.length))
         errorHandle();
@@ -94,9 +98,6 @@ void CryptoCollection::envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt
         errorHandle();
     oEncryptedData.length += partialLength;
 
-    memcpy(oAESData.key, tempKey, oAESData.length);
-    free(tempKey);
-
     EVP_CIPHER_CTX_free(ctx);
 }
 
@@ -104,11 +105,15 @@ void CryptoCollection::envelope_open(const Data& encryptedData, Data& oDecrypted
     EVP_CIPHER_CTX* ctx;
     int partialLength = 0;
 
+    oDecryptedData.data = (unsigned char *) malloc(encryptedData.length);
+    memset(oDecryptedData.data, 0, encryptedData.length);
+
     if(!(ctx = EVP_CIPHER_CTX_new()))
         errorHandle();
 
     if (1 != EVP_OpenInit(ctx, EVP_aes_128_cbc(), iAESData.key, iAESData.length, iAESData.initVector, privateKey))
        errorHandle();
+
 
     if (1 != EVP_OpenUpdate(ctx, oDecryptedData.data, &partialLength, encryptedData.data, encryptedData.length))
         errorHandle();
@@ -174,8 +179,13 @@ void CryptoCollection::sign(const Data& toSign, Data& oSignatureData) {
     if (1 != EVP_DigestSignUpdate(digestSignCtx, toSign.data, toSign.length))
         errorHandle();
 
+    //Size discovery
     if (1 != EVP_DigestSignFinal(digestSignCtx, NULL, (size_t*) &oSignatureData.length))
         errorHandle();
+
+    oSignatureData.data = (unsigned char *) malloc(oSignatureData.length);
+    memset(oSignatureData.data, 0, oSignatureData.length);
+
 
     if (1 != EVP_DigestSignFinal(digestSignCtx, oSignatureData.data, (size_t*) &oSignatureData.length))
         errorHandle();
@@ -212,6 +222,14 @@ void CryptoCollection::encryptRSA(const Data& toEncrypt, Data& oEncryptedData) {
     if (1 != EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING))
         errorHandle();
 
+    //Size discovery
+    if (1 != EVP_PKEY_encrypt(ctx, NULL, (size_t*) &oEncryptedData.length, toEncrypt.data, (size_t) toEncrypt.length))
+        errorHandle();
+
+    oEncryptedData.data = (unsigned char *) malloc(oEncryptedData.length);
+    memset(oEncryptedData.data, 0, oEncryptedData.length);
+
+
     if (1 != EVP_PKEY_encrypt(ctx, oEncryptedData.data, (size_t*) &oEncryptedData.length, toEncrypt.data, (size_t) toEncrypt.length))
         errorHandle();
 
@@ -230,6 +248,10 @@ void CryptoCollection::decryptRSA(const Data& toDecrypt, Data& oDecryptedData) {
     if (1 != EVP_PKEY_CTX_set_rsa_padding(ctx, RSA_PKCS1_OAEP_PADDING))
         errorHandle();
 
+    //Size discovery
+    if (1 != EVP_PKEY_decrypt(ctx, NULL, (size_t*) &oDecryptedData.length, toDecrypt.data, (size_t) toDecrypt.length))
+        errorHandle();
+
     if (1 != EVP_PKEY_decrypt(ctx, oDecryptedData.data, (size_t*) &oDecryptedData.length, toDecrypt.data, (size_t) toDecrypt.length))
         errorHandle();
 
@@ -240,7 +262,7 @@ void CryptoCollection::sendHomeMade(AESData& oAESData, const Data& dataToSend, D
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
     std::chrono::duration<double,std::micro> encryptionMicro, encryptionRSAMicro, signingMicro;
     unsigned char key[keyLength];
-    unsigned char initVector[bufferLength];
+    unsigned char initVector[EVP_MAX_IV_LENGTH];
 
     //Generating key and IV
     generateRandomBuffer(key, sizeof(key));
@@ -250,7 +272,6 @@ void CryptoCollection::sendHomeMade(AESData& oAESData, const Data& dataToSend, D
     memcpy(toEncryptAESData.data, key, keyLength);
 
     Data encryptedAESData;
-    encryptedAESData.length = bufferLength;
 
     //Encrypting Key Data
     start = std::chrono::high_resolution_clock::now();
@@ -258,9 +279,10 @@ void CryptoCollection::sendHomeMade(AESData& oAESData, const Data& dataToSend, D
     end = std::chrono::high_resolution_clock::now();
     encryptionRSAMicro = end - start;
 
+    oAESData.key = (unsigned char *) malloc(encryptedAESData.length);
     memcpy(oAESData.key, encryptedAESData.data, encryptedAESData.length);
     oAESData.length = encryptedAESData.length;
-    memcpy(oAESData.initVector, initVector, bufferLength);
+    memcpy(oAESData.initVector, initVector, EVP_MAX_IV_LENGTH);
 
     //Encrypting Message Data
     start = std::chrono::high_resolution_clock::now();
@@ -292,11 +314,9 @@ void CryptoCollection::receiveHomeMade(AESData& iAESData, const Data& signatureD
         std::cout << "[NOT] Signature *not* VERIFIED! [NOT]" << std::endl;
 
     Data decryptedAESData;
-    decryptedAESData.length = bufferLength;
 
-    Data encryptedAESData;
+    Data encryptedAESData(iAESData.length);
     memcpy(encryptedAESData.data, iAESData.key, iAESData.length);
-    encryptedAESData.length = iAESData.length; 
 
     //Decrypting Key Data
     start = std::chrono::high_resolution_clock::now();
@@ -321,8 +341,6 @@ void CryptoCollection::sendEnvelope(AESData& oAESData, const Data& dataToSend, D
     std::chrono::duration<double,std::micro> encryptionMicro, signingMicro;
 
     //Encrypting
-    Data aEncryptedData;
-    AESData aAESData;
     start = std::chrono::high_resolution_clock::now();
     envelope_seal(&publicKey, dataToSend, oEncryptedData, oAESData);
     end = std::chrono::high_resolution_clock::now();
@@ -331,7 +349,6 @@ void CryptoCollection::sendEnvelope(AESData& oAESData, const Data& dataToSend, D
     encryptTime.push_back(encryptionMicro.count());
 
     //Signing
-    Data aSignatureData;
     start = std::chrono::high_resolution_clock::now();
     sign(oEncryptedData, oSignatureData);
     end = std::chrono::high_resolution_clock::now();
