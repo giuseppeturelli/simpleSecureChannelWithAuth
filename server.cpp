@@ -32,20 +32,25 @@ int main() {
     sigaction(SIGINT, &sigIntHandler, NULL);
 
     try {
+        while (true) {
         boost::asio::io_service io_service;
 
         tcp::acceptor acceptor(io_service, tcp::endpoint(tcp::v4(), 1300));
+        tcp::socket socket(io_service);
+        acceptor.accept(socket);
 
-        while (true) {
-            tcp::socket socket(io_service);
-            acceptor.accept(socket);
+        boost::array<char, 8> buf;
+        boost::system::error_code error;
+
+        size_t len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
+        int numOfMessagesInSession = std::atoi(buf.data());
+
+        for (int t = 0; t < numOfMessagesInSession; ++t) {
 
             //std::cout << std::endl <<  "---------------------------New Message Received---------------------------" << std::endl;
             std::string message = make_daytime_string();
-            boost::array<char, 8> buf;
-            boost::system::error_code error;
 
-            size_t len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
+            len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
             int keyUsed = std::atoi(buf.data());
 
             crypto.setPrivateKey(privFile[keyUsed]);
@@ -95,6 +100,7 @@ int main() {
 
             boost::system::error_code ignored_error;
             boost::asio::write(socket, boost::asio::buffer(message), ignored_error);
+        }
         }
     }
 

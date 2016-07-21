@@ -33,18 +33,39 @@ int main(int argc, char* argv[]) {
         crypto.setPublicKey(pubFile[arg3]);
 
         int toSendSize = arg4;
-        srand(time(0));
         std::string randStr;
+        Data aToSend(toSendSize);
 
-        for(unsigned int i = 0; i < toSendSize; ++i) {
-            randStr += genRandom();
-        }
+        //Socket conneciton
+        boost::asio::io_service io_service;
+
+        tcp::resolver resolver(io_service);
+        tcp::resolver::query query(argv[1], "1300");
+        tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+
+        tcp::socket socket(io_service);
+        boost::asio::connect(socket, endpoint_iterator);
 
         std::cout << "Message Size: " << toSendSize << " bytes" << std::endl;
         //std::cout << randStr << std::endl;
+
+        boost::array<char, 128> buf;
+        boost::system::error_code error;
+
+        char lengthM[8];
+
+        std::sprintf(lengthM, "%8d", static_cast<int>(arg2));
+        socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
+
+
         for (int q = 0; q < arg2; q++) {
 
-            Data aToSend(toSendSize);
+            randStr.clear();
+            srand(time(0));
+            for(unsigned int i = 0; i < toSendSize; ++i) {
+                randStr += genRandom();
+            }
+
             memcpy(aToSend.data, randStr.c_str(), toSendSize);
 
             AESData aAESData;
@@ -53,48 +74,50 @@ int main(int argc, char* argv[]) {
 
             crypto.sendEnvelope(aAESData, aToSend, aEncryptedData, aSignatureData);
 
-            boost::asio::io_service io_service;
-
-            tcp::resolver resolver(io_service);
-            tcp::resolver::query query(argv[1], "1300");
-            tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-
-            tcp::socket socket(io_service);
-            boost::asio::connect(socket, endpoint_iterator);
-
-            boost::array<char, 128> buf;
-            boost::system::error_code error;
-
-            char lengthM[8];
-
             std::sprintf(lengthM, "%8d", static_cast<int>(arg3));
             socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
 
             std::sprintf(lengthM, "%8d", static_cast<int>(aAESData.length));
             socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
-            socket.write_some(boost::asio::buffer(aAESData.key, aAESData.length));
 
-            socket.write_some(boost::asio::buffer(aAESData.initVector, EVP_MAX_IV_LENGTH));
+            size_t len = 0;
+            while (len < aAESData.length) {
+                len += socket.write_some(boost::asio::buffer(aAESData.key + len, aAESData.length - len));
+            }
+
+            len = 0;
+            while (len < EVP_MAX_IV_LENGTH) {
+                len += socket.write_some(boost::asio::buffer(aAESData.initVector + len, EVP_MAX_IV_LENGTH - len));
+            }
 
             std::sprintf(lengthM, "%8d", static_cast<int>(aEncryptedData.length));
             socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
-            socket.write_some(boost::asio::buffer(aEncryptedData.data, aEncryptedData.length));
+
+            len = 0;
+            while (len < aEncryptedData.length) {
+                len += socket.write_some(boost::asio::buffer(aEncryptedData.data + len, aEncryptedData.length - len));
+            }
 
             std::sprintf(lengthM, "%8d", static_cast<int>(aSignatureData.length));
             socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
-            socket.write_some(boost::asio::buffer(aSignatureData.data, aSignatureData.length));
 
-            size_t len = socket.read_some(boost::asio::buffer(buf), error);
+            len = 0;
+            while (len < aSignatureData.length) {
+                len += socket.write_some(boost::asio::buffer(aSignatureData.data + len, aSignatureData.length - len));
+            }
+
+            len = 0;
+            len = socket.read_some(boost::asio::buffer(buf), error);
 
             if (error == boost::asio::error::eof)
                 return 1;
             else if (error)
                 throw boost::system::system_error(error);
 
-            socket.close();
 
         }
         crypto.printAverage();
+        socket.close();
     }
 
     catch (std::exception& e) {
