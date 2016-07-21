@@ -42,42 +42,55 @@ int main() {
 
             //std::cout << std::endl <<  "---------------------------New Message Received---------------------------" << std::endl;
             std::string message = make_daytime_string();
-            boost::array<char, 4> buf;
+            boost::array<char, 8> buf;
             boost::system::error_code error;
 
-            socket.read_some(boost::asio::buffer(buf, sizeof(char)*4), error);
+            size_t len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
             int keyUsed = std::atoi(buf.data());
 
             crypto.setPrivateKey(privFile[keyUsed]);
             crypto.setPublicKey(pubFile[keyUsed]);
 
-            socket.read_some(boost::asio::buffer(buf, sizeof(char)*4), error);
+            len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
             int length = std::atoi(buf.data());
 
             AESData aAESData(length);
-            socket.read_some(boost::asio::buffer(aAESData.key, aAESData.length), error);
-            socket.read_some(boost::asio::buffer(aAESData.initVector,  EVP_MAX_IV_LENGTH), error);
+            len = 0;
+            while(len < aAESData.length) {
+                len += socket.read_some(boost::asio::buffer(aAESData.key + len, aAESData.length - len), error);
+            }
 
-            socket.read_some(boost::asio::buffer(buf, sizeof(char)*4), error);
+            len = 0;
+            while(len < EVP_MAX_IV_LENGTH) {
+                len += socket.read_some(boost::asio::buffer(aAESData.initVector + len,  EVP_MAX_IV_LENGTH - len), error);
+            }
+
+            len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
             length = std::atoi(buf.data());
 
             Data aEncryptedData(length);
-            socket.read_some(boost::asio::buffer(aEncryptedData.data, aEncryptedData.length), error);
+            len = 0;
+            while(len < aEncryptedData.length) {
+                len += socket.read_some(boost::asio::buffer(aEncryptedData.data + len, aEncryptedData.length - len), error);
+            }
 
-            socket.read_some(boost::asio::buffer(buf, sizeof(char)*4), error);
+            len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
             length = std::atoi(buf.data());
 
             Data aSignatureData(length);
-            socket.read_some(boost::asio::buffer(aSignatureData.data, aSignatureData.length), error);
+            len = 0;
+            while (len < aSignatureData.length) {
+                len += socket.read_some(boost::asio::buffer(aSignatureData.data + len, aSignatureData.length - len), error);
+            }
 
             Data aDecryptedData;
             crypto.receiveEnvelope(aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
-            char* printData = (char*) malloc(aDecryptedData.length+1);
+            char* printData = (char*) malloc(aDecryptedData.length + 1);
             printData[aDecryptedData.length] = '\0';
             memcpy(printData, aDecryptedData.data, aDecryptedData.length);
-            std::cout << "DecryptBufSize: " << aDecryptedData.length << " Decrypted Message Size: ";
-            printf("%s\n", printData);
+            //std::cout << "DecryptBufSize: " << aDecryptedData.length << std::endl;
+            //printf("%s\n", printData);
             //fflush(stdout);
 
             boost::system::error_code ignored_error;

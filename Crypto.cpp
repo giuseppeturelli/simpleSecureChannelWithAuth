@@ -200,9 +200,10 @@ bool CryptoCollection::verify(const Data& signedData, const Data& signatureData)
         errorHandle();
 
     if (1 != EVP_DigestVerifyUpdate(digestSignCtx, signedData.data, signedData.length))
-        errorHandle();
+        return false;
 
     bool ret = EVP_DigestVerifyFinal(digestSignCtx, signatureData.data, signatureData.length);
+    
     EVP_MD_CTX_destroy(digestSignCtx);
 
     return ret;
@@ -355,8 +356,6 @@ void CryptoCollection::sendEnvelope(AESData& oAESData, const Data& dataToSend, D
     signingMicro = end - start;
 
     signTime.push_back(signingMicro.count());
-
-    //std::cout << "Encryption time in microseconds: " << encryptionMicro.count() << std::endl << "Signing time in microseconds: " << signingMicro.count() << std::endl;
 }
 
 void CryptoCollection::receiveEnvelope(AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData) {
@@ -382,80 +381,4 @@ void CryptoCollection::receiveEnvelope(AESData& iAESData, const Data& signatureD
     decryptionMicro = end - start;
 
     decryptTime.push_back(decryptionMicro.count());
-
-    //std::cout << "Verifying Time in microseconds: " << verifyingMicro.count() << std::endl << "Decryption Time in microseconds: " << decryptionMicro.count() << std::endl;
 }
-
-/*
-int main(int argc, char* argv[]) {
-    std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
-    std::chrono::duration<double,std::micro> encryptionMicro, signingMicro, verifyingMicro, decryptionMicro;
-    int ret = -1;
-    unsigned char key[keyLength];
-    unsigned char initVector[bufferLength];
-
-
-    //std::string toEncrypt = "u8bZgY4IB0CHtAxNTLpa8oCWji8kvAqFx07Mb3sptkBC9RPS3kOe3w4xVFvv77Go01LG2yXzk300yTTJxNNRzv5BDt2LeWcbqhKgIJli1gjlpgy2yeueLaTrkOBMPKIWq1GNyv3E3k5u8kkQUzDumrUUvu6XZvBstOlWKcni2k3lHD382yaDhwvvPau8Acz7Uucaeg1hTr3G0VB2ESSVssAwzbGgS5OUfA24U2ifSOe4IncxWB8WJF9NXbytoM7gSbF2M20iPRUhtqnTDi4oQxDEUUiySCjKRh2kUNQ6Qv4tAfiMbtei6fOrxF6Ivb6oCCY0E2m2OuIOTPVrvVt0s8x2u6oiElyIwjG7oa70TvLEaFRs6rRRNznHf7WyvTeCn0xCPQwYCWXHzaAnDbNIoQv6XlWkNwry1AZRkESvXg8zqkmCYgY8STBZC1nk5El8yGCFUvSnUM4tDgMUh0cUQDiwcRjzHM5b4ZnvTLcLrZ5g5J8PrHe4zPxquj0BCHD3ghUb0oxSqLALTI0qmfGtXuQ9yiAVL8Pq4lY7aSlvfcP2z5V9xTPOsgb5p6hNEGrj8BfswkXrva5pZ6YmD0nvv6GJhDLC0lbW20XWmVr9RR1XkHXUTmZx7DGvrKoG8SOJnKuYWEoHstqNr11LvowKPuKNEzKN4Octy8kH9yFu3Y007qz5cINSXuJajuuUHcVnK1z45cUikeSwbffBVr2tugmEsMbgZKuNTMgzpu2juK0AQ7Y0N4CNgaXTv96vR0Kr2iBeMGnGlBQ8tSjf6cizPbGQrLkRs96VR8Xp6r3b0i08ywapEAPv38eQHWvu093JZcUTpmp13VzeJK9mvphaYWQmaFJU9i8qkRrI5crFItCh0Z4BSEkvlJwwFMhtQv78AzDjWzfbxDaVS1XSk2p5REDS3PmGx9vQts7W90rJuSxsEiLbNS4hNjKx1YeuvCinoTkhwcAEqx4gpBJT7ucRaNHooOK7eEPM03WzSUne2efWfK6MQrNhXD78N9elDYww";
-    std::string toEncrypt = "AllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainx";
-    //Getting RSA Private key
-    FILE* fp;
-    EVP_PKEY* privateKey;
-
-    if ((fp = fopen("/etc/ssh/ssh_host_rsa_key", "r")) != NULL) {
-        privateKey = PEM_read_PrivateKey(fp, NULL, 0, NULL);
-        if (privateKey == NULL)
-            errorHandle();
-        std::cout << "Loaded Private RSA key!" << std::endl;
-        fclose(fp);
-    } else {
-        std::cout << "Private RSA key missing, exiting!" << std::endl;
-    }
-    //Getting RSA Public key
-    EVP_PKEY* publicKey;
-
-    if ((fp = fopen("/etc/ssh/ssh_host_rsa_key_pub", "r")) != NULL) {
-        publicKey = PEM_read_PUBKEY(fp, NULL, 0, NULL);
-        if (publicKey == NULL)
-            errorHandle();
-
-        std::cout << "Loaded Public RSA key!" << std::endl;
-        fclose(fp);
-    } else {
-        std::cout << "Public RSA key missing, exiting!" << std::endl;
-        exit(1);
-    }
-
-    Data aToSend;
-    memcpy(aToSend.data, toEncrypt.c_str(), toEncrypt.length());
-    aToSend.length = toEncrypt.length();
-
-    AESData aAESData;
-    Data aSignatureData;
-    Data aEncryptedData;
-    Data aDecryptedData;
-
-    std::cout << "------------------Envelope version------------------" << std::endl;
-    clientSendEnvelope(publicKey, privateKey, aAESData, aToSend, aEncryptedData, aSignatureData);
-    receiveEnvelope(publicKey, privateKey, aAESData, aSignatureData, aEncryptedData, aDecryptedData);
-
-    std::string decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
-    std::cout << "This after decryption: " << decryptedDataStr << std::endl;
- 
-    memset(aEncryptedData.data, 0, bufferLength);
-    aEncryptedData.length = 0;
-    memset(aDecryptedData.data, 0, bufferLength);
-    aDecryptedData.length = 0;
-
-    std::cout << "------------------HomeMade version------------------" << std::endl;
-    clientSendHomeMade(publicKey, privateKey, aAESData, aToSend, aEncryptedData, aSignatureData);
-    receiveHomeMade(publicKey, privateKey, aAESData, aSignatureData, aEncryptedData, aDecryptedData);
-
-    decryptedDataStr = std::string((const char*)aDecryptedData.data).substr(0, aDecryptedData.length);
-    std::cout << "This after decryption: " << decryptedDataStr << std::endl;
-
-    EVP_PKEY_free(publicKey);
-    EVP_PKEY_free(privateKey);
-
-    return 0;
-}
-*/

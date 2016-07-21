@@ -34,16 +34,16 @@ class AESData {
     public:
         unsigned char* key;
         unsigned char initVector[EVP_MAX_IV_LENGTH];
-        int length = 0;
+        int length;
 
-        AESData() {
-            key = (unsigned char*) malloc(keyLength*sizeof(unsigned char));
-            memset(key, 0, keyLength);
+        AESData() : key(NULL), length(0) {
+            //key = (unsigned char*) malloc(keyLength*sizeof(unsigned char));
+            //memset(key, 0, keyLength);
             //length = bufferLength;
         }
 
         AESData(int size) {
-            key = (unsigned char*) malloc(size*sizeof(unsigned char));
+            key = (unsigned char*) malloc(size);
             memset(key, 0, size);
             length = size;
         }

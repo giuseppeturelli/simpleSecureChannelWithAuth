@@ -40,9 +40,9 @@ int main(int argc, char* argv[]) {
             randStr += genRandom();
         }
 
-        std::cout << "Message Size: " << toSendSize << " bytes" << "Message Content: " <<  randStr << std::endl;
+        std::cout << "Message Size: " << toSendSize << " bytes" << std::endl;
+        //std::cout << randStr << std::endl;
         for (int q = 0; q < arg2; q++) {
-
 
             Data aToSend(toSendSize);
             memcpy(aToSend.data, randStr.c_str(), toSendSize);
@@ -65,23 +65,23 @@ int main(int argc, char* argv[]) {
             boost::array<char, 128> buf;
             boost::system::error_code error;
 
-            char lengthM[4];
+            char lengthM[8];
 
-            std::sprintf(lengthM, "%4d", static_cast<int>(arg3));
-            socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*4));
+            std::sprintf(lengthM, "%8d", static_cast<int>(arg3));
+            socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
 
-            std::sprintf(lengthM, "%4d", static_cast<int>(aAESData.length));
-            socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*4));
+            std::sprintf(lengthM, "%8d", static_cast<int>(aAESData.length));
+            socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
             socket.write_some(boost::asio::buffer(aAESData.key, aAESData.length));
 
             socket.write_some(boost::asio::buffer(aAESData.initVector, EVP_MAX_IV_LENGTH));
 
-            std::sprintf(lengthM, "%4d", static_cast<int>(aEncryptedData.length));
-            socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*4));
+            std::sprintf(lengthM, "%8d", static_cast<int>(aEncryptedData.length));
+            socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
             socket.write_some(boost::asio::buffer(aEncryptedData.data, aEncryptedData.length));
 
-            std::sprintf(lengthM, "%4d", static_cast<int>(aSignatureData.length));
-            socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*4));
+            std::sprintf(lengthM, "%8d", static_cast<int>(aSignatureData.length));
+            socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
             socket.write_some(boost::asio::buffer(aSignatureData.data, aSignatureData.length));
 
             size_t len = socket.read_some(boost::asio::buffer(buf), error);
@@ -91,12 +91,15 @@ int main(int argc, char* argv[]) {
             else if (error)
                 throw boost::system::system_error(error);
 
+            socket.close();
+
         }
         crypto.printAverage();
     }
+
     catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
-    
+
     return 0;
 }
