@@ -7,6 +7,7 @@
 #include "Crypto.h"
 
 using boost::asio::ip::tcp;
+
 static const char alphanum[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 
@@ -31,76 +32,77 @@ int main() {
 
     sigaction(SIGINT, &sigIntHandler, NULL);
 
+    //Acceptor creation
+    boost::asio::io_service io_service;
+    tcp::acceptor acceptor(io_service, tcp::endpoint(tcp::v4(), 1300));
+
     try {
         while (true) {
-        boost::asio::io_service io_service;
 
-        tcp::acceptor acceptor(io_service, tcp::endpoint(tcp::v4(), 1300));
-        tcp::socket socket(io_service);
-        acceptor.accept(socket);
+            tcp::socket socket(io_service);
+            acceptor.accept(socket);
 
-        boost::array<char, 8> buf;
-        boost::system::error_code error;
+            boost::array<char, 8> buf;
+            boost::system::error_code error;
 
-        size_t len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
-        int numOfMessagesInSession = std::atoi(buf.data());
+            size_t len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
+            int numOfMessagesInSession = std::atoi(buf.data());
 
-        for (int t = 0; t < numOfMessagesInSession; ++t) {
+            for (int t = 0; t < numOfMessagesInSession; ++t) {
 
-            //std::cout << std::endl <<  "---------------------------New Message Received---------------------------" << std::endl;
-            std::string message = make_daytime_string();
+                //std::cout << std::endl <<  "---------------------------New Message Received---------------------------" << std::endl;
+                std::string message = make_daytime_string();
 
-            len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
-            int keyUsed = std::atoi(buf.data());
+                len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
+                int keyUsed = std::atoi(buf.data());
 
-            crypto.setPrivateKey(privFile[keyUsed]);
-            crypto.setPublicKey(pubFile[keyUsed]);
+                crypto.setPrivateKey(privFile[keyUsed]);
+                crypto.setPublicKey(pubFile[keyUsed]);
 
-            len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
-            int length = std::atoi(buf.data());
+                len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
+                int length = std::atoi(buf.data());
 
-            AESData aAESData(length);
-            len = 0;
-            while(len < aAESData.length) {
-                len += socket.read_some(boost::asio::buffer(aAESData.key + len, aAESData.length - len), error);
+                AESData aAESData(length);
+                len = 0;
+                while(len < aAESData.length) {
+                    len += socket.read_some(boost::asio::buffer(aAESData.key + len, aAESData.length - len), error);
+                }
+
+                len = 0;
+                while(len < EVP_MAX_IV_LENGTH) {
+                    len += socket.read_some(boost::asio::buffer(aAESData.initVector + len,  EVP_MAX_IV_LENGTH - len), error);
+                }
+
+                len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
+                length = std::atoi(buf.data());
+
+                Data aEncryptedData(length);
+                len = 0;
+                while(len < aEncryptedData.length) {
+                    len += socket.read_some(boost::asio::buffer(aEncryptedData.data + len, aEncryptedData.length - len), error);
+                }
+
+                len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
+                length = std::atoi(buf.data());
+
+                Data aSignatureData(length);
+                len = 0;
+                while (len < aSignatureData.length) {
+                    len += socket.read_some(boost::asio::buffer(aSignatureData.data + len, aSignatureData.length - len), error);
+                }
+
+                Data aDecryptedData;
+                crypto.receiveEnvelope(aAESData, aSignatureData, aEncryptedData, aDecryptedData);
+
+                char* printData = (char*) malloc(aDecryptedData.length + 1);
+                printData[aDecryptedData.length] = '\0';
+                memcpy(printData, aDecryptedData.data, aDecryptedData.length);
+                //std::cout << "DecryptBufSize: " << aDecryptedData.length << std::endl;
+                //printf("%s\n", printData);
+
+                boost::system::error_code ignored_error;
+                boost::asio::write(socket, boost::asio::buffer(message), ignored_error);
             }
-
-            len = 0;
-            while(len < EVP_MAX_IV_LENGTH) {
-                len += socket.read_some(boost::asio::buffer(aAESData.initVector + len,  EVP_MAX_IV_LENGTH - len), error);
-            }
-
-            len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
-            length = std::atoi(buf.data());
-
-            Data aEncryptedData(length);
-            len = 0;
-            while(len < aEncryptedData.length) {
-                len += socket.read_some(boost::asio::buffer(aEncryptedData.data + len, aEncryptedData.length - len), error);
-            }
-
-            len = socket.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
-            length = std::atoi(buf.data());
-
-            Data aSignatureData(length);
-            len = 0;
-            while (len < aSignatureData.length) {
-                len += socket.read_some(boost::asio::buffer(aSignatureData.data + len, aSignatureData.length - len), error);
-            }
-
-            Data aDecryptedData;
-            crypto.receiveEnvelope(aAESData, aSignatureData, aEncryptedData, aDecryptedData);
-
-            char* printData = (char*) malloc(aDecryptedData.length + 1);
-            printData[aDecryptedData.length] = '\0';
-            memcpy(printData, aDecryptedData.data, aDecryptedData.length);
-            //std::cout << "DecryptBufSize: " << aDecryptedData.length << std::endl;
-            //printf("%s\n", printData);
-            //fflush(stdout);
-
-            boost::system::error_code ignored_error;
-            boost::asio::write(socket, boost::asio::buffer(message), ignored_error);
-        }
         }
     }
 
