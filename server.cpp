@@ -11,13 +11,7 @@
 
 using boost::asio::ip::tcp;
 
-static const char alphanum[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-
-
-CryptoCollection crypto;
-
 void sigIntHandlerFunction(int s) {
-    crypto.printAverage();
     exit(0);
 }
 
@@ -39,7 +33,7 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
         }
 
         void start() {
-            message_ = "KOOL";
+            CryptoCollection crypto;
             boost::array<char, 8> buf;
             boost::system::error_code error;
 
@@ -101,6 +95,7 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
                 boost::system::error_code ignored_error;
                 boost::asio::write(socket_, boost::asio::buffer(message), ignored_error);
             }
+            crypto.printAverage();
         }
 
         private:
@@ -109,7 +104,6 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
             void handle_write(const boost::system::error_code&, size_t) {}
 
             tcp::socket socket_;
-            std::string message_;
 };
 
 
@@ -128,11 +122,11 @@ class tcp_server {
         }
 
         void handle_accept(tcp_connection::pointer new_connection, const boost::system::error_code& error) {
+            start_accept();
             if (!error) {
                 new_connection->start();
             }
 
-            start_accept();
         }
 
         tcp::acceptor acceptor_;

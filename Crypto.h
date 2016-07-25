@@ -5,11 +5,11 @@
 #include <vector>
 #include <numeric>
 #include <boost/shared_ptr.hpp>
+#include <map>
 
 static const int keyLength = 1024;
 
-
-static const std::vector<std::string> privFile = {"./rsaKey1024", "./rsaKey2048", "./rsaKey4096" };
+static const std::vector<std::string> privFile = {"./rsaKey1024", "./rsaKey2048", "./rsaKey4096"};
 static const std::vector<std::string> pubFile = {"./rsaKey1024_pub", "./rsaKey2048_pub", "./rsaKey4096_pub"};
 
 class Data {
@@ -26,7 +26,8 @@ class Data {
         }
 
         ~Data() {
-            free(data);
+            if (data != NULL)
+                free(data);
         }
 };
 
@@ -49,17 +50,14 @@ class AESData {
         }
 
         ~AESData() {
-            free(key);
+            if (key != NULL)
+                free(key);
         }
 };
 
-//Helper Functions
-void printAverage();
-//Getting RSA keypair
-
-
 class CryptoCollection {
     public:
+        CryptoCollection();
         ~CryptoCollection();
 
         void printAverage();
@@ -87,9 +85,14 @@ class CryptoCollection {
 
         void envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt, Data& oEncryptedData, AESData& oAESData);
         void envelope_open(const Data& encryptedData, Data& oDecryptedData, const AESData& iAESData);
+        void loadKeys();
+        void unloadKeys();
+        void loadPrivKey(std::string keyFilePath);
+        void loadPubKey(std::string keyFilePath);
 
         EVP_PKEY* privateKey;
         EVP_PKEY* publicKey;
         std::vector<float> signTime, encryptTime, decryptTime, verifyTime;
         int messagesReceived = 0;
+        std::map<std::string, EVP_PKEY*> keys;
 };

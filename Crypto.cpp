@@ -8,9 +8,13 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
+
+CryptoCollection::CryptoCollection() {
+    loadKeys();
+}
+
 CryptoCollection::~CryptoCollection() {
-    EVP_PKEY_free(publicKey);
-    EVP_PKEY_free(privateKey);
+    unloadKeys();
 }
 
 void CryptoCollection::printAverage() {
@@ -31,34 +35,59 @@ void CryptoCollection::printAverage() {
 
 }
 
-void CryptoCollection::setPrivateKey(const std::string& keyFilePath) {
-    FILE* fp;
-    if ((fp = fopen(keyFilePath.c_str(), "r")) != NULL) {
-        privateKey = PEM_read_PrivateKey(fp, NULL, 0, NULL);
-        if (privateKey == NULL)
-            errorHandle();
-        //std::cout << "Loaded Private RSA key!" << std::endl;
-        fclose(fp);
-    } else {
-        std::cout << "Private RSA key missing, exiting!" << std::endl;
+void CryptoCollection::loadKeys() {
+
+    auto it = privFile.begin();
+    for (; it != privFile.end();++it) {
+        loadPrivKey(*it);
+    }
+    it = pubFile.begin();
+    for (; it != pubFile.end();++it) {
+        loadPubKey(*it);
     }
 }
 
-void CryptoCollection::setPublicKey(const std::string& keyFilePath) {
-    FILE* fp;
-    //Getting RSA Public key
-
-    if ((fp = fopen(keyFilePath.c_str(), "r")) != NULL) {
-        publicKey = PEM_read_PUBKEY(fp, NULL, 0, NULL);
-        if (publicKey == NULL)
-            errorHandle();
-
-        //std::cout << "Loaded Public RSA key!" << std::endl;
-        fclose(fp);
-    } else {
-        std::cout << "Public RSA key missing, exiting!" << std::endl;
-        exit(1);
+void CryptoCollection::unloadKeys() {
+    auto it = keys.begin();
+    for (;it != keys.end();++it) {
+        EVP_PKEY_free(it->second);
     }
+}
+
+void CryptoCollection::loadPubKey(std::string keyFilePath) {
+    FILE* fp;
+    EVP_PKEY* loadedKey = NULL;
+    if ((fp = fopen(keyFilePath.c_str(), "r")) != NULL) {
+        loadedKey = PEM_read_PUBKEY(fp, NULL, 0, NULL);
+        if (loadedKey == NULL)
+            std::cout << "Failed to load key!" << std::endl;
+        fclose(fp);
+        keys[keyFilePath] = loadedKey;
+    } else {
+        std::cout << "RSA key missing!" << std::endl;
+    }
+}
+
+void CryptoCollection::loadPrivKey(std::string keyFilePath) {
+    FILE* fp;
+    EVP_PKEY* loadedKey = NULL;
+    if ((fp = fopen(keyFilePath.c_str(), "r")) != NULL) {
+        loadedKey = PEM_read_PrivateKey(fp, NULL, 0, NULL);
+        if (loadedKey == NULL)
+            std::cout << "Failed to load key!" << std::endl;
+        fclose(fp);
+        keys[keyFilePath] = loadedKey;
+    } else {
+        std::cout << "RSA key missing!" << std::endl;
+    }
+}
+
+void CryptoCollection::setPrivateKey(const std::string& keyFilePath) {
+    privateKey = keys[keyFilePath];
+}
+
+void CryptoCollection::setPublicKey(const std::string& keyFilePath) {
+    publicKey = keys[keyFilePath];
 }
 
 void CryptoCollection::generateRandomBuffer(unsigned char* ioRandBuffer, int size) {
