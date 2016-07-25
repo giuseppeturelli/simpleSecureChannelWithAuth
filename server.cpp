@@ -91,6 +91,7 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
                 memcpy(printData, aDecryptedData.data, aDecryptedData.length);
                 //std::cout << "DecryptBufSize: " << aDecryptedData.length << std::endl;
                 //printf("%s\n", printData);
+                free(printData);
 
                 boost::system::error_code ignored_error;
                 boost::asio::write(socket_, boost::asio::buffer(message), ignored_error);
@@ -100,9 +101,7 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
 
         private:
             tcp_connection(boost::asio::io_service& io_service) : socket_ (io_service) {}
-
             void handle_write(const boost::system::error_code&, size_t) {}
-
             tcp::socket socket_;
 };
 
