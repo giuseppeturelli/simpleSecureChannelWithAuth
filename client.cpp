@@ -49,13 +49,13 @@ int main(int argc, char* argv[]) {
         std::cout << "Message Size: " << toSendSize << " bytes" << std::endl;
         //std::cout << randStr << std::endl;
 
-        boost::array<char, 128> buf;
-        boost::system::error_code error;
+        boost::array<char, 8> buf;
+        boost::system::error_code ignored_error;
 
         char lengthM[8];
 
         std::sprintf(lengthM, "%8d", static_cast<int>(arg2));
-        socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
+        boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
 
 
         for (int q = 0; q < arg2; q++) {
@@ -75,45 +75,34 @@ int main(int argc, char* argv[]) {
             crypto.sendEnvelope(aAESData, aToSend, aEncryptedData, aSignatureData);
 
             std::sprintf(lengthM, "%8d", static_cast<int>(arg3));
-            socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
+            boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
 
             std::sprintf(lengthM, "%8d", static_cast<int>(aAESData.length));
-            socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
-
-            size_t len = 0;
-            while (len < aAESData.length) {
-                len += socket.write_some(boost::asio::buffer(aAESData.key + len, aAESData.length - len));
-            }
-
-            len = 0;
-            while (len < EVP_MAX_IV_LENGTH) {
-                len += socket.write_some(boost::asio::buffer(aAESData.initVector + len, EVP_MAX_IV_LENGTH - len));
-            }
+            boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(aAESData.key, aAESData.length), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(aAESData.initVector, EVP_MAX_IV_LENGTH), ignored_error);
 
             std::sprintf(lengthM, "%8d", static_cast<int>(aEncryptedData.length));
-            socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
-
-            len = 0;
-            while (len < aEncryptedData.length) {
-                len += socket.write_some(boost::asio::buffer(aEncryptedData.data + len, aEncryptedData.length - len));
-            }
+            boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(aEncryptedData.data, aEncryptedData.length), ignored_error);
 
             std::sprintf(lengthM, "%8d", static_cast<int>(aSignatureData.length));
-            socket.write_some(boost::asio::buffer(lengthM, sizeof(char)*8));
+            boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(aSignatureData.data, aSignatureData.length), ignored_error);
 
-            len = 0;
-            while (len < aSignatureData.length) {
-                len += socket.write_some(boost::asio::buffer(aSignatureData.data + len, aSignatureData.length - len));
-            }
+            boost::asio::read(socket, boost::asio::buffer(buf, 8), ignored_error);
+            int length = std::atoi(buf.data());
+            Data dataFromServer(length);
+            boost::asio::read(socket, boost::asio::buffer(dataFromServer.data, dataFromServer.length), ignored_error);
 
-            len = 0;
-            len = socket.read_some(boost::asio::buffer(buf), error);
+            char* dataFromSrvChar = (char*) malloc(dataFromServer.length + 1); 
+            dataFromSrvChar[dataFromServer.length] = '\0';
+            memcpy(dataFromSrvChar, dataFromServer.data, dataFromServer.length);
+            std::string stringFromSrv(dataFromSrvChar);
+            if (stringFromSrv.compare(randStr) != 0)
+                std::cout << "Strings *DO NOT* compare EQUAL, test failed!" << std::endl;
 
-            if (error == boost::asio::error::eof)
-                return 1;
-            else if (error)
-                throw boost::system::system_error(error);
-
+            free(dataFromSrvChar);
 
         }
         crypto.printAverage();

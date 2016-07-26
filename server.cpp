@@ -15,11 +15,6 @@ void sigIntHandlerFunction(int s) {
     exit(0);
 }
 
-std::string make_daytime_string() {
-    std::time_t now = std::time(0);
-    return std::ctime(&now);
-}
-
 class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
     public:
         typedef boost::shared_ptr<tcp_connection> pointer;
@@ -35,67 +30,44 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
         void start() {
             CryptoCollection crypto;
             boost::array<char, 8> buf;
-            boost::system::error_code error;
+            boost::system::error_code ignored_error;
 
-            size_t len = socket_.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
+            boost::asio::read(socket_, boost::asio::buffer(buf, 8), ignored_error);
             int numOfMessagesInSession = std::atoi(buf.data());
 
             for (int t = 0; t < numOfMessagesInSession; ++t) {
 
-                //std::cout << std::endl <<  "---------------------------New Message Received---------------------------" << std::endl;
-                std::string message = make_daytime_string();
-
-                len = socket_.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
+                boost::asio::read(socket_, boost::asio::buffer(buf, 8), ignored_error);
                 int keyUsed = std::atoi(buf.data());
 
                 crypto.setPrivateKey(privFile[keyUsed]);
                 crypto.setPublicKey(pubFile[keyUsed]);
 
-                len = socket_.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
+                boost::asio::read(socket_, boost::asio::buffer(buf, 8), ignored_error);
                 int length = std::atoi(buf.data());
-
                 AESData aAESData(length);
-                len = 0;
-                while(len < aAESData.length) {
-                    len += socket_.read_some(boost::asio::buffer(aAESData.key + len, aAESData.length - len), error);
-                }
+                boost::asio::read(socket_, boost::asio::buffer(aAESData.key, aAESData.length), ignored_error);
+                boost::asio::read(socket_, boost::asio::buffer(aAESData.initVector,  EVP_MAX_IV_LENGTH), ignored_error);
 
-                len = 0;
-                while(len < EVP_MAX_IV_LENGTH) {
-                    len += socket_.read_some(boost::asio::buffer(aAESData.initVector + len,  EVP_MAX_IV_LENGTH - len), error);
-                }
-
-                len = socket_.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
+                boost::asio::read(socket_, boost::asio::buffer(buf, 8), ignored_error);
                 length = std::atoi(buf.data());
-
                 Data aEncryptedData(length);
-                len = 0;
-                while(len < aEncryptedData.length) {
-                    len += socket_.read_some(boost::asio::buffer(aEncryptedData.data + len, aEncryptedData.length - len), error);
-                }
+                boost::asio::read(socket_, boost::asio::buffer(aEncryptedData.data, aEncryptedData.length), ignored_error);
 
-                len = socket_.read_some(boost::asio::buffer(buf, sizeof(char)*8), error);
+                boost::asio::read(socket_, boost::asio::buffer(buf, 8), ignored_error);
                 length = std::atoi(buf.data());
-
                 Data aSignatureData(length);
-                len = 0;
-                while (len < aSignatureData.length) {
-                    len += socket_.read_some(boost::asio::buffer(aSignatureData.data + len, aSignatureData.length - len), error);
-                }
+                boost::asio::read(socket_, boost::asio::buffer(aSignatureData.data, aSignatureData.length), ignored_error);
 
                 Data aDecryptedData;
                 crypto.receiveEnvelope(aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
-                char* printData = (char*) malloc(aDecryptedData.length + 1);
-                printData[aDecryptedData.length] = '\0';
-                memcpy(printData, aDecryptedData.data, aDecryptedData.length);
-                //std::cout << "DecryptBufSize: " << aDecryptedData.length << std::endl;
-                //printf("%s\n", printData);
-                free(printData);
-
-                boost::system::error_code ignored_error;
-                boost::asio::write(socket_, boost::asio::buffer(message), ignored_error);
+                char lengthM[8];
+                std::sprintf(lengthM, "%8d", static_cast<int>(aDecryptedData.length));
+                boost::asio::write(socket_, boost::asio::buffer(lengthM, 8), ignored_error);
+                boost::asio::write(socket_, boost::asio::buffer(aDecryptedData.data, aDecryptedData.length), ignored_error);
             }
+
             crypto.printAverage();
         }
 
@@ -125,7 +97,6 @@ class tcp_server {
             if (!error) {
                 new_connection->start();
             }
-
         }
 
         tcp::acceptor acceptor_;
