@@ -20,14 +20,15 @@ class Data {
         Data() : data(NULL), length(0) {}
 
         Data(int size) {
-            data = (unsigned char*) malloc(size*sizeof(unsigned char));
+            data = (unsigned char*) malloc(size);
             memset(data, 0, size);
             length = size;
         }
 
         ~Data() {
-            if (data != NULL)
+            if (data != NULL) {
                 free(data);
+            }
         }
 };
 
@@ -37,12 +38,7 @@ class AESData {
         unsigned char initVector[EVP_MAX_IV_LENGTH];
         int length;
 
-        AESData() : key(NULL), length(0) {
-            //key = (unsigned char*) malloc(keyLength*sizeof(unsigned char));
-            //memset(key, 0, keyLength);
-            //length = bufferLength;
-        }
-
+        AESData() : key(NULL), length(0) {}
         AESData(int size) {
             key = (unsigned char*) malloc(size);
             memset(key, 0, size);
@@ -50,8 +46,9 @@ class AESData {
         }
 
         ~AESData() {
-            if (key != NULL)
+            if (key != NULL) {
                 free(key);
+            }
         }
 };
 
