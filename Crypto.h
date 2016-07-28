@@ -28,6 +28,7 @@ class Data {
         ~Data() {
             if (data != NULL) {
                 free(data);
+                data = NULL;
             }
         }
 };
@@ -48,6 +49,7 @@ class AESData {
         ~AESData() {
             if (key != NULL) {
                 free(key);
+                key = NULL;
             }
         }
 };
