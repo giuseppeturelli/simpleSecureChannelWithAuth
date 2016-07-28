@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
 
         int arg2 = std::atoi(argv[2]);
         int arg3 = std::atoi(argv[3]);
-        int arg4 = std::atoi(argv[4]);
+        unsigned int arg4 = std::atoi(argv[4]);
 
         if (arg3 < 0 || arg3 > 2) {
             std::cerr << "0, 1 or 2 are the keys available" << std::endl;
@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
         crypto.setPrivateKey(privFile[arg3]);
         crypto.setPublicKey(pubFile[arg3]);
 
-        int toSendSize = arg4;
+        unsigned int toSendSize = arg4;
         std::string randStr;
         Data aToSend(toSendSize);
 
