@@ -18,19 +18,8 @@ class Data {
         long unsigned int length;
 
         Data() : data(NULL), length(0) {}
-
-        Data(int size) {
-            data = (unsigned char*) malloc(size);
-            memset(data, 0, size);
-            length = size;
-        }
-
-        ~Data() {
-            if (data != NULL) {
-                free(data);
-                data = NULL;
-            }
-        }
+        Data(int size);
+        ~Data();
 };
 
 class AESData {
@@ -40,18 +29,8 @@ class AESData {
         int length;
 
         AESData() : key(NULL), length(0) {}
-        AESData(int size) {
-            key = (unsigned char*) malloc(size);
-            memset(key, 0, size);
-            length = size;
-        }
-
-        ~AESData() {
-            if (key != NULL) {
-                free(key);
-                key = NULL;
-            }
-        }
+        AESData(int size);
+        ~AESData();
 };
 
 class CryptoCollection {

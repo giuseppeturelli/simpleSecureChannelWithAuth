@@ -9,6 +9,33 @@
 #include <openssl/err.h>
 
 
+
+Data::Data(int size) {
+    data = (unsigned char*) malloc(size);
+    memset(data, 0, size);
+    length = size;
+}
+
+Data::~Data() {
+    if (data != NULL) {
+        free(data);
+        data = NULL;
+    }
+}
+
+AESData::AESData(int size) {
+    key = (unsigned char*) malloc(size);
+    memset(key, 0, size);
+    length = size;
+}
+
+AESData::~AESData() {
+    if (key != NULL) {
+        free(key);
+        key = NULL;
+    }
+}
+
 CryptoCollection::CryptoCollection() {
     loadKeys();
 }
