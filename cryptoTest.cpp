@@ -29,7 +29,7 @@ void errorHandle() {
 
 int main(int argc, char* argv[]) {
     std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
-    std::chrono::duration<double,std::micro> encryptionMicro, signingMicro, verifyingMicro, decryptionMicro; 
+    std::chrono::duration<double,std::micro> encryptionMicro, signingMicro, verifyingMicro, decryptionMicro;
     int ret = -1;
     unsigned char key[keyLength];
     unsigned char initVector[ivLength];
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
     generateRandomBuffer(initVector, sizeof(initVector));
     //std::string toEncrypt = "u8bZgY4IB0CHtAxNTLpa8oCWji8kvAqFx07Mb3sptkBC9RPS3kOe3w4xVFvv77Go01LG2yXzk300yTTJxNNRzv5BDt2LeWcbqhKgIJli1gjlpgy2yeueLaTrkOBMPKIWq1GNyv3E3k5u8kkQUzDumrUUvu6XZvBstOlWKcni2k3lHD382yaDhwvvPau8Acz7Uucaeg1hTr3G0VB2ESSVssAwzbGgS5OUfA24U2ifSOe4IncxWB8WJF9NXbytoM7gSbF2M20iPRUhtqnTDi4oQxDEUUiySCjKRh2kUNQ6Qv4tAfiMbtei6fOrxF6Ivb6oCCY0E2m2OuIOTPVrvVt0s8x2u6oiElyIwjG7oa70TvLEaFRs6rRRNznHf7WyvTeCn0xCPQwYCWXHzaAnDbNIoQv6XlWkNwry1AZRkESvXg8zqkmCYgY8STBZC1nk5El8yGCFUvSnUM4tDgMUh0cUQDiwcRjzHM5b4ZnvTLcLrZ5g5J8PrHe4zPxquj0BCHD3ghUb0oxSqLALTI0qmfGtXuQ9yiAVL8Pq4lY7aSlvfcP2z5V9xTPOsgb5p6hNEGrj8BfswkXrva5pZ6YmD0nvv6GJhDLC0lbW20XWmVr9RR1XkHXUTmZx7DGvrKoG8SOJnKuYWEoHstqNr11LvowKPuKNEzKN4Octy8kH9yFu3Y007qz5cINSXuJajuuUHcVnK1z45cUikeSwbffBVr2tugmEsMbgZKuNTMgzpu2juK0AQ7Y0N4CNgaXTv96vR0Kr2iBeMGnGlBQ8tSjf6cizPbGQrLkRs96VR8Xp6r3b0i08ywapEAPv38eQHWvu093JZcUTpmp13VzeJK9mvphaYWQmaFJU9i8qkRrI5crFItCh0Z4BSEkvlJwwFMhtQv78AzDjWzfbxDaVS1XSk2p5REDS3PmGx9vQts7W90rJuSxsEiLbNS4hNjKx1YeuvCinoTkhwcAEqx4gpBJT7ucRaNHooOK7eEPM03WzSUne2efWfK6MQrNhXD78N9elDYww";
     std::string toEncrypt = "AllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainxAllTheseMomentsWillBeLostInTimeLikeTearsInRainx";
-    
+
     //Initialization of cipher context
     EVP_CIPHER_CTX* cipherCtx = EVP_CIPHER_CTX_new();
     EVP_CIPHER_CTX_set_padding(cipherCtx, 1);
@@ -65,7 +65,7 @@ int main(int argc, char* argv[]) {
     if (1 != EVP_EncryptFinal_ex(cipherCtx, encryptedData+encryptedDataLength, &encryptedDataLength))
         errorHandle();
     totLengthEncr += encryptedDataLength;
-    end = std::chrono::system_clock::now(); 
+    end = std::chrono::system_clock::now();
     encryptionMicro = end - start;
     //END: Message Encryption operation
 
@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
 
 
     std::string signatureDataStr = std::string((const char*)signatureData).substr(0, signatureDataLength);
-    end = std::chrono::system_clock::now(); 
+    end = std::chrono::system_clock::now();
     signingMicro = end - start;
     //END: Message Signing operation
 
@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
     else
         std::cout << "[NOT] Signature *not* VERIFIED! [NOT]" << std::endl;
 
-    end = std::chrono::system_clock::now(); 
+    end = std::chrono::system_clock::now();
     verifyingMicro = end - start;
     //END: Message Verifying operation
 
@@ -152,10 +152,10 @@ int main(int argc, char* argv[]) {
     if (1 != EVP_DecryptFinal_ex(cipherCtx, decryptedData+decryptedDataLength, &decryptedDataLength))
         errorHandle();
     totLengthDecr += decryptedDataLength;
-    end = std::chrono::system_clock::now(); 
+    end = std::chrono::system_clock::now();
     decryptionMicro = end - start;
     //END: Decryption operation
-    
+
     std::string decryptedDataStr = std::string((const char*)decryptedData).substr(0, totLengthDecr);
     std::cout << "This after decryption: " << decryptedDataStr << std::endl;
 

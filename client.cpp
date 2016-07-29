@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
             Data dataFromServer(length);
             boost::asio::read(socket, boost::asio::buffer(dataFromServer.dataPtr(), dataFromServer.length), ignored_error);
 
-            char* dataFromSrvChar = (char*) malloc(dataFromServer.length + 1); 
+            char* dataFromSrvChar = (char*) malloc(dataFromServer.length + 1);
             dataFromSrvChar[dataFromServer.length] = '\0';
             memcpy(dataFromSrvChar, dataFromServer.dataPtr(), dataFromServer.length);
             std::string stringFromSrv(dataFromSrvChar);

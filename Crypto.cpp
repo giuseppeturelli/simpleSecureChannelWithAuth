@@ -164,7 +164,7 @@ void CryptoCollection::envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt
 void CryptoCollection::envelope_open(const Data& encryptedData, Data& oDecryptedData, const AESData& iAESData) {
     EVP_CIPHER_CTX* ctx;
     int partialLength = 0;
-    
+
     oDecryptedData.resize(encryptedData.length);
 
     if(!(ctx = EVP_CIPHER_CTX_new()))
@@ -260,7 +260,7 @@ bool CryptoCollection::verify(const Data& signedData, const Data& signatureData)
         return false;
 
     bool ret = EVP_DigestVerifyFinal(digestSignCtx, signatureData.dataPtr(), signatureData.length);
-    
+
     EVP_MD_CTX_destroy(digestSignCtx);
 
     return ret;
