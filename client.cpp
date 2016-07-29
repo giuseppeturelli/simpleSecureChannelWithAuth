@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
                 randStr += genRandom();
             }
 
-            memcpy(aToSend.data, randStr.c_str(), toSendSize);
+            memcpy(aToSend.dataPtr(), randStr.c_str(), toSendSize);
 
             AESData aAESData;
             Data aEncryptedData;
@@ -84,20 +84,20 @@ int main(int argc, char* argv[]) {
 
             std::sprintf(lengthM, "%8d", static_cast<int>(aEncryptedData.length));
             boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
-            boost::asio::write(socket, boost::asio::buffer(aEncryptedData.data, aEncryptedData.length), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(aEncryptedData.dataPtr(), aEncryptedData.length), ignored_error);
 
             std::sprintf(lengthM, "%8d", static_cast<int>(aSignatureData.length));
             boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
-            boost::asio::write(socket, boost::asio::buffer(aSignatureData.data, aSignatureData.length), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(aSignatureData.dataPtr(), aSignatureData.length), ignored_error);
 
             boost::asio::read(socket, boost::asio::buffer(buf, 8), ignored_error);
             int length = std::atoi(buf.data());
             Data dataFromServer(length);
-            boost::asio::read(socket, boost::asio::buffer(dataFromServer.data, dataFromServer.length), ignored_error);
+            boost::asio::read(socket, boost::asio::buffer(dataFromServer.dataPtr(), dataFromServer.length), ignored_error);
 
             char* dataFromSrvChar = (char*) malloc(dataFromServer.length + 1); 
             dataFromSrvChar[dataFromServer.length] = '\0';
-            memcpy(dataFromSrvChar, dataFromServer.data, dataFromServer.length);
+            memcpy(dataFromSrvChar, dataFromServer.dataPtr(), dataFromServer.length);
             std::string stringFromSrv(dataFromSrvChar);
             if (stringFromSrv.compare(randStr) != 0)
                 std::cout << "Strings *DO NOT* compare EQUAL, test failed!" << std::endl;
