@@ -62,10 +62,20 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
                 Data aDecryptedData;
                 crypto.receiveEnvelope(aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
+                int le = aDecryptedData.length;
+
                 char lengthM[8];
-                std::sprintf(lengthM, "%8d", static_cast<int>(aDecryptedData.length));
+                std::sprintf(lengthM, "%8d", aDecryptedData.length);
+                aDecryptedData.length = le;
                 boost::asio::write(socket_, boost::asio::buffer(lengthM, 8), ignored_error);
                 boost::asio::write(socket_, boost::asio::buffer(aDecryptedData.dataPtr(), aDecryptedData.length), ignored_error);
+
+
+                //char* data = (char*) malloc(aDecryptedData.length + 1);
+                //data[aDecryptedData.length] = '\0';
+                //memcpy(data, aDecryptedData.dataPtr(), aDecryptedData.length);
+                //std::string strin(data);
+                //std::cout << "STRR: " << strin << std::endl;
             }
 
             crypto.printAverage();

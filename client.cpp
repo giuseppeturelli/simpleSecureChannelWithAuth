@@ -99,6 +99,7 @@ int main(int argc, char* argv[]) {
             dataFromSrvChar[dataFromServer.length] = '\0';
             memcpy(dataFromSrvChar, dataFromServer.dataPtr(), dataFromServer.length);
             std::string stringFromSrv(dataFromSrvChar);
+            //std::cout << "STR: " << stringFromSrv << std::endl;
             if (stringFromSrv.compare(randStr) != 0)
                 std::cout << "Strings *DO NOT* compare EQUAL, test failed!" << std::endl;
 

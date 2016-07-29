@@ -14,7 +14,7 @@ static const std::vector<std::string> pubFile = {"./rsaKey1024_pub", "./rsaKey20
 
 class Data {
     public:
-        Data() {}
+        Data() : length(0) {}
         Data(int size);
         
         unsigned char* dataPtr();
@@ -22,7 +22,7 @@ class Data {
         void resize(int size);
         int size();
 
-        int length = 0;
+        int length;
 
     private:
         std::vector<unsigned char> data_;
