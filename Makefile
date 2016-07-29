@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-std=c++11 -Wall -g -fpermissive
+CFLAGS=-std=c++11 -Wall -g
 
 all: client server
 

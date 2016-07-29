@@ -18,6 +18,7 @@ class Data {
         Data(int size);
         
         unsigned char* dataPtr();
+        const unsigned char* dataPtr() const;
         void resize(int size);
         int size();
 

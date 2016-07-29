@@ -19,6 +19,10 @@ unsigned char* Data::dataPtr() {
     return &data_[0];
 }
 
+const unsigned char* Data::dataPtr() const {
+    return &data_[0];
+}
+
 void Data::resize(int size) {
     data_.resize(size);
     length = size;
