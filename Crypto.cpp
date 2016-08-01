@@ -12,7 +12,6 @@
 
 Data::Data(int size) {
     data_.resize(size);
-    length = size;
 }
 
 unsigned char* Data::dataPtr() {
@@ -25,10 +24,13 @@ const unsigned char* Data::dataPtr() const {
 
 void Data::resize(int size) {
     data_.resize(size);
-    length = size;
 }
 
 int Data::size() {
+    return data_.size();
+}
+
+const int Data::size() const {
     return data_.size();
 }
 
@@ -140,6 +142,7 @@ void CryptoCollection::errorHandle() {
 
 void CryptoCollection::envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt, Data& oEncryptedData, AESData& oAESData) {
     EVP_CIPHER_CTX* ctx;
+    int totLength = 0;
     int partialLength = 0;
 
     oAESData.key = (unsigned char *) malloc(EVP_PKEY_size(publicKey[0]));
@@ -151,25 +154,28 @@ void CryptoCollection::envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt
     if (!EVP_SealInit(ctx, EVP_aes_128_cbc(), &oAESData.key, &oAESData.length, oAESData.initVector, publicKey, 1))
         errorHandle();
 
-    //Size discovery
-    oEncryptedData.resize(toEncrypt.length + EVP_MAX_BLOCK_LENGTH);
+    //Size
+    oEncryptedData.resize(toEncrypt.size() + EVP_MAX_BLOCK_LENGTH);
 
-    if (1 != EVP_SealUpdate(ctx, oEncryptedData.dataPtr(), &partialLength, toEncrypt.dataPtr(), toEncrypt.length))
+    if (1 != EVP_SealUpdate(ctx, oEncryptedData.dataPtr(), &partialLength, toEncrypt.dataPtr(), toEncrypt.size()))
         errorHandle();
-    oEncryptedData.length = partialLength;
+    totLength = partialLength;
 
-    if (1 != EVP_SealFinal(ctx, oEncryptedData.dataPtr() + oEncryptedData.length, &partialLength))
+    if (1 != EVP_SealFinal(ctx, oEncryptedData.dataPtr() + totLength, &partialLength))
         errorHandle();
-    oEncryptedData.length += partialLength;
+
+    totLength += partialLength;
+    oEncryptedData.resize(totLength);
 
     EVP_CIPHER_CTX_free(ctx);
 }
 
 void CryptoCollection::envelope_open(const Data& encryptedData, Data& oDecryptedData, const AESData& iAESData) {
     EVP_CIPHER_CTX* ctx;
+    int totLength = 0;
     int partialLength = 0;
 
-    oDecryptedData.resize(encryptedData.length);
+    oDecryptedData.resize(encryptedData.size());
 
     if(!(ctx = EVP_CIPHER_CTX_new()))
         errorHandle();
@@ -178,13 +184,16 @@ void CryptoCollection::envelope_open(const Data& encryptedData, Data& oDecrypted
        errorHandle();
 
 
-    if (1 != EVP_OpenUpdate(ctx, oDecryptedData.dataPtr(), &partialLength, encryptedData.dataPtr(), encryptedData.length))
+    if (1 != EVP_OpenUpdate(ctx, oDecryptedData.dataPtr(), &partialLength, encryptedData.dataPtr(), encryptedData.size()))
         errorHandle();
-    oDecryptedData.length = partialLength;
 
-    if (1 != EVP_OpenFinal(ctx, oDecryptedData.dataPtr() + oDecryptedData.length, &partialLength))
+    totLength = partialLength;
+
+    if (1 != EVP_OpenFinal(ctx, oDecryptedData.dataPtr() + totLength, &partialLength))
         errorHandle();
-    oDecryptedData.length += partialLength;
+
+    totLength += partialLength;
+    oDecryptedData.resize(totLength);
 
     EVP_CIPHER_CTX_free(ctx);
 }
@@ -193,19 +202,23 @@ void CryptoCollection::encryptAES(const AESData& iAESData, const Data& toEncrypt
     //Initialization of cipher context
     EVP_CIPHER_CTX* cipherCtx = EVP_CIPHER_CTX_new();
 
+    oEncryptedData.resize(toEncrypt.size());
+
     //START: Message Encryption operation
+    int totLength = 0;
     int partialLength = 0;
     if (1 != EVP_EncryptInit_ex(cipherCtx, EVP_aes_128_cbc(), NULL, iAESData.key, iAESData.initVector))
         errorHandle();
 
-    if (1 != EVP_EncryptUpdate(cipherCtx, oEncryptedData.dataPtr(), &partialLength, toEncrypt.dataPtr(),
-        toEncrypt.length))
-        errorHandle();
-    oEncryptedData.length += partialLength;
 
-    if (1 != EVP_EncryptFinal_ex(cipherCtx, oEncryptedData.dataPtr() + oEncryptedData.length, &partialLength))
+    if (1 != EVP_EncryptUpdate(cipherCtx, oEncryptedData.dataPtr(), &partialLength, toEncrypt.dataPtr(), toEncrypt.size()))
         errorHandle();
-    oEncryptedData.length += partialLength;
+    totLength += partialLength;
+
+    if (1 != EVP_EncryptFinal_ex(cipherCtx, oEncryptedData.dataPtr() + partialLength, &partialLength))
+        errorHandle();
+
+    oEncryptedData.resize(totLength);
     //END: Message Encryption operation
     EVP_CIPHER_CTX_free(cipherCtx);
 }
@@ -215,19 +228,26 @@ void CryptoCollection::decryptAES(const AESData& iAESData, const Data& toDecrypt
     EVP_CIPHER_CTX* cipherCtx = EVP_CIPHER_CTX_new();
     EVP_CIPHER_CTX_set_padding(cipherCtx, 1);
 
+    oDecryptedData.resize(toDecrypt.size());
+
     //START: Decryption operation
-    int partialDataLength = 0;
+    int totLength = 0;
+    int partialLength = 0;
 
     if (1 != EVP_DecryptInit_ex(cipherCtx, EVP_aes_128_cbc(), NULL, iAESData.key, iAESData.initVector))
         errorHandle();
 
-    if (1 != EVP_DecryptUpdate(cipherCtx, oDecryptedData.dataPtr(), &partialDataLength, toDecrypt.dataPtr(), toDecrypt.length))
-        errorHandle();
-    oDecryptedData.length += partialDataLength;
 
-    if (1 != EVP_DecryptFinal_ex(cipherCtx, oDecryptedData.dataPtr() + oDecryptedData.length, &partialDataLength))
+    if (1 != EVP_DecryptUpdate(cipherCtx, oDecryptedData.dataPtr(), &partialLength, toDecrypt.dataPtr(),
+        toDecrypt.size()))
         errorHandle();
-    oDecryptedData.length += partialDataLength;
+    totLength = partialLength;
+
+    if (1 != EVP_DecryptFinal_ex(cipherCtx, oDecryptedData.dataPtr() + partialLength, &partialLength))
+        errorHandle();
+
+    totLength += partialLength;
+    oDecryptedData.resize(totLength);
     //END: Decryption operation
     EVP_CIPHER_CTX_free(cipherCtx);
 }
@@ -239,17 +259,21 @@ void CryptoCollection::sign(const Data& toSign, Data& oSignatureData) {
     if (1 != EVP_DigestSignInit(digestSignCtx, NULL, EVP_sha256(), NULL, privateKey))
         errorHandle();
 
-    if (1 != EVP_DigestSignUpdate(digestSignCtx, toSign.dataPtr(), toSign.length))
+    if (1 != EVP_DigestSignUpdate(digestSignCtx, toSign.dataPtr(), toSign.size()))
         errorHandle();
 
     //Size discovery
-    if (1 != EVP_DigestSignFinal(digestSignCtx, NULL, (size_t*) &oSignatureData.length))
+    int foreseenLength = 0;
+    if (1 != EVP_DigestSignFinal(digestSignCtx, NULL, (size_t*) &foreseenLength))
         errorHandle();
 
-    oSignatureData.resize(oSignatureData.length);
+    oSignatureData.resize(foreseenLength);
 
-    if (1 != EVP_DigestSignFinal(digestSignCtx, oSignatureData.dataPtr(), (size_t*) &oSignatureData.length))
+    int finalLength = foreseenLength;
+    if (1 != EVP_DigestSignFinal(digestSignCtx, oSignatureData.dataPtr(), (size_t*) &finalLength))
         errorHandle();
+
+    oSignatureData.resize(finalLength);
     EVP_MD_CTX_destroy(digestSignCtx);
     //END: Message Signing operation
 }
@@ -260,10 +284,10 @@ bool CryptoCollection::verify(const Data& signedData, const Data& signatureData)
     if (1 != EVP_DigestVerifyInit(digestSignCtx, NULL, EVP_sha256(), NULL, publicKey))
         errorHandle();
 
-    if (1 != EVP_DigestVerifyUpdate(digestSignCtx, signedData.dataPtr(), signedData.length))
+    if (1 != EVP_DigestVerifyUpdate(digestSignCtx, signedData.dataPtr(), signedData.size()))
         return false;
 
-    bool ret = EVP_DigestVerifyFinal(digestSignCtx, signatureData.dataPtr(), signatureData.length);
+    bool ret = EVP_DigestVerifyFinal(digestSignCtx, signatureData.dataPtr(), signatureData.size());
 
     EVP_MD_CTX_destroy(digestSignCtx);
 
@@ -285,13 +309,15 @@ void CryptoCollection::encryptRSA(const Data& toEncrypt, Data& oEncryptedData) {
         errorHandle();
 
     //Size discovery
-    if (1 != EVP_PKEY_encrypt(ctx, NULL, (size_t*) &oEncryptedData.length, toEncrypt.dataPtr(), (size_t)
-        toEncrypt.length))
+    int foreseenLength = 0;
+    if (1 != EVP_PKEY_encrypt(ctx, NULL, (size_t*) &foreseenLength, toEncrypt.dataPtr(), (size_t)
+        toEncrypt.size()))
         errorHandle();
 
-    oEncryptedData.resize(oEncryptedData.length);
+    oEncryptedData.resize(foreseenLength);
 
-    if (1 != EVP_PKEY_encrypt(ctx, oEncryptedData.dataPtr(), (size_t*) &oEncryptedData.length, toEncrypt.dataPtr(), (size_t) toEncrypt.length))
+    int finalLength = 0;
+    if (1 != EVP_PKEY_encrypt(ctx, oEncryptedData.dataPtr(), (size_t*) &finalLength, toEncrypt.dataPtr(), (size_t) toEncrypt.size()))
         errorHandle();
 
     EVP_PKEY_CTX_free(ctx);
@@ -310,12 +336,14 @@ void CryptoCollection::decryptRSA(const Data& toDecrypt, Data& oDecryptedData) {
         errorHandle();
 
     //Size discovery
-    if (1 != EVP_PKEY_decrypt(ctx, NULL, (size_t*) &oDecryptedData.length, toDecrypt.dataPtr(), (size_t) toDecrypt.length))
+    int foreseenLength = 0;
+    if (1 != EVP_PKEY_decrypt(ctx, NULL, (size_t*) &foreseenLength, toDecrypt.dataPtr(), (size_t) toDecrypt.size()))
         errorHandle();
 
-    oDecryptedData.resize(oDecryptedData.length);
+    oDecryptedData.resize(foreseenLength);
 
-    if (1 != EVP_PKEY_decrypt(ctx, oDecryptedData.dataPtr(), (size_t*) &oDecryptedData.length, toDecrypt.dataPtr(), (size_t) toDecrypt.length))
+    int finalLength = 0;
+    if (1 != EVP_PKEY_decrypt(ctx, oDecryptedData.dataPtr(), (size_t*) &finalLength, toDecrypt.dataPtr(), (size_t) toDecrypt.size()))
         errorHandle();
 
     EVP_PKEY_CTX_free(ctx);
@@ -342,9 +370,10 @@ void CryptoCollection::sendHomeMade(AESData& oAESData, const Data& dataToSend, D
     end = std::chrono::high_resolution_clock::now();
     encryptionRSAMicro = end - start;
 
-    oAESData.key = (unsigned char *) malloc(encryptedAESData.length);
-    memcpy(oAESData.key, encryptedAESData.dataPtr(), encryptedAESData.length);
-    oAESData.length = encryptedAESData.length;
+    oAESData.key = (unsigned char *) malloc(encryptedAESData.size());
+    memcpy(oAESData.key, encryptedAESData.dataPtr(), encryptedAESData.size());
+    oAESData.length = encryptedAESData.size();
+
     memcpy(oAESData.initVector, initVector, EVP_MAX_IV_LENGTH);
 
     //Encrypting Message Data
@@ -387,8 +416,8 @@ void CryptoCollection::receiveHomeMade(AESData& iAESData, const Data& signatureD
     end = std::chrono::high_resolution_clock::now();
     decryptionRSAMicro = end - start;
 
-    memcpy(iAESData.key, decryptedAESData.dataPtr(), decryptedAESData.length);
-    iAESData.length = decryptedAESData.length;
+    memcpy(iAESData.key, decryptedAESData.dataPtr(), decryptedAESData.size());
+    iAESData.length = decryptedAESData.size();
 
     //Decryption
     start = std::chrono::high_resolution_clock::now();

@@ -52,28 +52,25 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
                 boost::asio::read(socket_, boost::asio::buffer(buf, 8), ignored_error);
                 length = std::atoi(buf.data());
                 Data aEncryptedData(length);
-                boost::asio::read(socket_, boost::asio::buffer(aEncryptedData.dataPtr(), aEncryptedData.length), ignored_error);
+                boost::asio::read(socket_, boost::asio::buffer(aEncryptedData.dataPtr(), aEncryptedData.size()), ignored_error);
 
                 boost::asio::read(socket_, boost::asio::buffer(buf, 8), ignored_error);
                 length = std::atoi(buf.data());
                 Data aSignatureData(length);
-                boost::asio::read(socket_, boost::asio::buffer(aSignatureData.dataPtr(), aSignatureData.length), ignored_error);
+                boost::asio::read(socket_, boost::asio::buffer(aSignatureData.dataPtr(), aSignatureData.size()), ignored_error);
 
                 Data aDecryptedData;
                 crypto.receiveEnvelope(aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
-                int le = aDecryptedData.length;
-
                 char lengthM[8];
-                std::sprintf(lengthM, "%8d", aDecryptedData.length);
-                aDecryptedData.length = le;
+                std::sprintf(lengthM, "%8d", aDecryptedData.size());
                 boost::asio::write(socket_, boost::asio::buffer(lengthM, 8), ignored_error);
-                boost::asio::write(socket_, boost::asio::buffer(aDecryptedData.dataPtr(), aDecryptedData.length), ignored_error);
+                boost::asio::write(socket_, boost::asio::buffer(aDecryptedData.dataPtr(), aDecryptedData.size()), ignored_error);
 
 
-                //char* data = (char*) malloc(aDecryptedData.length + 1);
-                //data[aDecryptedData.length] = '\0';
-                //memcpy(data, aDecryptedData.dataPtr(), aDecryptedData.length);
+                //char* data = (char*) malloc(aDecryptedData.size() + 1);
+                //data[aDecryptedData.size()] = '\0';
+                //memcpy(data, aDecryptedData.dataPtr(), aDecryptedData.size());
                 //std::string strin(data);
                 //std::cout << "STRR: " << strin << std::endl;
             }

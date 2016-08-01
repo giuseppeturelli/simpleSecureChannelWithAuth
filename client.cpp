@@ -82,22 +82,22 @@ int main(int argc, char* argv[]) {
             boost::asio::write(socket, boost::asio::buffer(aAESData.key, aAESData.length), ignored_error);
             boost::asio::write(socket, boost::asio::buffer(aAESData.initVector, EVP_MAX_IV_LENGTH), ignored_error);
 
-            std::sprintf(lengthM, "%8d", static_cast<int>(aEncryptedData.length));
+            std::sprintf(lengthM, "%8d", static_cast<int>(aEncryptedData.size()));
             boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
-            boost::asio::write(socket, boost::asio::buffer(aEncryptedData.dataPtr(), aEncryptedData.length), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(aEncryptedData.dataPtr(), aEncryptedData.size()), ignored_error);
 
-            std::sprintf(lengthM, "%8d", static_cast<int>(aSignatureData.length));
+            std::sprintf(lengthM, "%8d", static_cast<int>(aSignatureData.size()));
             boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
-            boost::asio::write(socket, boost::asio::buffer(aSignatureData.dataPtr(), aSignatureData.length), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(aSignatureData.dataPtr(), aSignatureData.size()), ignored_error);
 
             boost::asio::read(socket, boost::asio::buffer(buf, 8), ignored_error);
             int length = std::atoi(buf.data());
             Data dataFromServer(length);
-            boost::asio::read(socket, boost::asio::buffer(dataFromServer.dataPtr(), dataFromServer.length), ignored_error);
+            boost::asio::read(socket, boost::asio::buffer(dataFromServer.dataPtr(), dataFromServer.size()), ignored_error);
 
-            char* dataFromSrvChar = (char*) malloc(dataFromServer.length + 1);
-            dataFromSrvChar[dataFromServer.length] = '\0';
-            memcpy(dataFromSrvChar, dataFromServer.dataPtr(), dataFromServer.length);
+            char* dataFromSrvChar = (char*) malloc(dataFromServer.size() + 1);
+            dataFromSrvChar[dataFromServer.size()] = '\0';
+            memcpy(dataFromSrvChar, dataFromServer.dataPtr(), dataFromServer.size());
             std::string stringFromSrv(dataFromSrvChar);
             //std::cout << "STR: " << stringFromSrv << std::endl;
             if (stringFromSrv.compare(randStr) != 0)
