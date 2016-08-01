@@ -49,13 +49,13 @@ int main(int argc, char* argv[]) {
         std::cout << "Message Size: " << toSendSize << " bytes" << std::endl;
         //std::cout << randStr << std::endl;
 
-        boost::array<char, 8> buf;
+        boost::array<char, 9> buf;
         boost::system::error_code ignored_error;
 
-        char lengthM[8];
+        char lengthM[9];
 
         std::sprintf(lengthM, "%8d", static_cast<int>(arg2));
-        boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
+        boost::asio::write(socket, boost::asio::buffer(lengthM, 9), ignored_error);
 
 
         for (int q = 0; q < arg2; q++) {
@@ -75,22 +75,22 @@ int main(int argc, char* argv[]) {
             crypto.sendEnvelope(aAESData, aToSend, aEncryptedData, aSignatureData);
 
             std::sprintf(lengthM, "%8d", static_cast<int>(arg3));
-            boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(lengthM, 9), ignored_error);
 
             std::sprintf(lengthM, "%8d", static_cast<int>(aAESData.length));
-            boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(lengthM, 9), ignored_error);
             boost::asio::write(socket, boost::asio::buffer(aAESData.key, aAESData.length), ignored_error);
             boost::asio::write(socket, boost::asio::buffer(aAESData.initVector, EVP_MAX_IV_LENGTH), ignored_error);
 
             std::sprintf(lengthM, "%8d", static_cast<int>(aEncryptedData.size()));
-            boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(lengthM, 9), ignored_error);
             boost::asio::write(socket, boost::asio::buffer(aEncryptedData.dataPtr(), aEncryptedData.size()), ignored_error);
 
             std::sprintf(lengthM, "%8d", static_cast<int>(aSignatureData.size()));
-            boost::asio::write(socket, boost::asio::buffer(lengthM, 8), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(lengthM, 9), ignored_error);
             boost::asio::write(socket, boost::asio::buffer(aSignatureData.dataPtr(), aSignatureData.size()), ignored_error);
 
-            boost::asio::read(socket, boost::asio::buffer(buf, 8), ignored_error);
+            boost::asio::read(socket, boost::asio::buffer(buf, 9), ignored_error);
             int length = std::atoi(buf.data());
             Data dataFromServer(length);
             boost::asio::read(socket, boost::asio::buffer(dataFromServer.dataPtr(), dataFromServer.size()), ignored_error);
