@@ -32,47 +32,49 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
             boost::array<char, 9> buf;
             boost::system::error_code ignored_error;
 
+            //Getting the total number of messages the client wants to send
             boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
             int numOfMessagesInSession = std::atoi(buf.data());
 
+            //Getting the keypair used, the AES encrypted data, the encrypted data, signature data, decrypt and verify and finally send the cleartext data to the client for verification
             for (int t = 0; t < numOfMessagesInSession; ++t) {
-
                 boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
                 int keyUsed = std::atoi(buf.data());
 
                 crypto.setPrivateKey(privFile[keyUsed]);
                 crypto.setPublicKey(pubFile[keyUsed]);
 
+                //Getting AES key data (encrypted)
                 boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
                 int length = std::atoi(buf.data());
-                AESData aAESData(length);
-                boost::asio::read(socket_, boost::asio::buffer(aAESData.key, aAESData.length), ignored_error);
-                boost::asio::read(socket_, boost::asio::buffer(aAESData.initVector,  EVP_MAX_IV_LENGTH), ignored_error);
+                AESData aAESData;
+                aAESData.key.resize(length);
+                aAESData.initVector.resize(EVP_MAX_IV_LENGTH);
 
+                boost::asio::read(socket_, boost::asio::buffer(aAESData.key.dataPtr(), aAESData.key.size()), ignored_error);
+                boost::asio::read(socket_, boost::asio::buffer(aAESData.initVector.dataPtr(), aAESData.initVector.size()), ignored_error);
+
+                //Getting Encrypted data
                 boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
                 length = std::atoi(buf.data());
                 Data aEncryptedData(length);
                 boost::asio::read(socket_, boost::asio::buffer(aEncryptedData.dataPtr(), aEncryptedData.size()), ignored_error);
 
+                //Getting Signature data
                 boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
                 length = std::atoi(buf.data());
                 Data aSignatureData(length);
                 boost::asio::read(socket_, boost::asio::buffer(aSignatureData.dataPtr(), aSignatureData.size()), ignored_error);
 
+                //Decrypting data
                 Data aDecryptedData;
                 crypto.receiveEnvelope(aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
+                //Sending decrypted data in cleartext for verification (this is a PoC)
                 char lengthM[9];
                 std::sprintf(lengthM, "%8d", aDecryptedData.size());
                 boost::asio::write(socket_, boost::asio::buffer(lengthM, 9), ignored_error);
                 boost::asio::write(socket_, boost::asio::buffer(aDecryptedData.dataPtr(), aDecryptedData.size()), ignored_error);
-
-
-                //char* data = (char*) malloc(aDecryptedData.size() + 1);
-                //data[aDecryptedData.size()] = '\0';
-                //memcpy(data, aDecryptedData.dataPtr(), aDecryptedData.size());
-                //std::string strin(data);
-                //std::cout << "STRR: " << strin << std::endl;
             }
 
             crypto.printAverage();

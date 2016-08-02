@@ -33,8 +33,6 @@ int main(int argc, char* argv[]) {
         crypto.setPublicKey(pubFile[arg3]);
 
         unsigned int toSendSize = arg4;
-        std::string randStr;
-        Data aToSend(toSendSize);
 
         //Socket conneciton
         boost::asio::io_service io_service;
@@ -52,59 +50,56 @@ int main(int argc, char* argv[]) {
         boost::array<char, 9> buf;
         boost::system::error_code ignored_error;
 
+        //Informing server of the total number of messages
         char lengthM[9];
-
         std::sprintf(lengthM, "%8d", static_cast<int>(arg2));
         boost::asio::write(socket, boost::asio::buffer(lengthM, 9), ignored_error);
 
+        //Generating a random string of the desired size
+        Data aToSend(toSendSize);
+        srand(time(0));
+        unsigned char* innerVectorPtr = aToSend.dataPtr();
+        for(int i = 0; i < aToSend.size(); ++i) {
+            innerVectorPtr[i] = genRandom();
+        }
 
+        //Encrypting, sending the encrypted data, receiving the decrypted data (in clear, this is a PoC) and verifying that the cleartext data matches
         for (int q = 0; q < arg2; q++) {
-
-            randStr.clear();
-            srand(time(0));
-            for(unsigned int i = 0; i < toSendSize; ++i) {
-                randStr += genRandom();
-            }
-
-            memcpy(aToSend.dataPtr(), randStr.c_str(), toSendSize);
-
             AESData aAESData;
             Data aEncryptedData;
             Data aSignatureData;
 
             crypto.sendEnvelope(aAESData, aToSend, aEncryptedData, aSignatureData);
 
+            //Sending info about the private keypair used
             std::sprintf(lengthM, "%8d", static_cast<int>(arg3));
             boost::asio::write(socket, boost::asio::buffer(lengthM, 9), ignored_error);
 
-            std::sprintf(lengthM, "%8d", static_cast<int>(aAESData.length));
+            //Sending the AES encrypted key
+            std::sprintf(lengthM, "%8d", static_cast<int>(aAESData.key.size()));
             boost::asio::write(socket, boost::asio::buffer(lengthM, 9), ignored_error);
-            boost::asio::write(socket, boost::asio::buffer(aAESData.key, aAESData.length), ignored_error);
-            boost::asio::write(socket, boost::asio::buffer(aAESData.initVector, EVP_MAX_IV_LENGTH), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(aAESData.key.dataPtr(), aAESData.key.size()), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(aAESData.initVector.dataPtr(), aAESData.initVector.size()), ignored_error);
 
+            //Sending encrypted data
             std::sprintf(lengthM, "%8d", static_cast<int>(aEncryptedData.size()));
             boost::asio::write(socket, boost::asio::buffer(lengthM, 9), ignored_error);
             boost::asio::write(socket, boost::asio::buffer(aEncryptedData.dataPtr(), aEncryptedData.size()), ignored_error);
 
+            //Sending signature data
             std::sprintf(lengthM, "%8d", static_cast<int>(aSignatureData.size()));
             boost::asio::write(socket, boost::asio::buffer(lengthM, 9), ignored_error);
             boost::asio::write(socket, boost::asio::buffer(aSignatureData.dataPtr(), aSignatureData.size()), ignored_error);
 
+            //Getting the data previously sent in cleartext from the server
             boost::asio::read(socket, boost::asio::buffer(buf, 9), ignored_error);
             int length = std::atoi(buf.data());
             Data dataFromServer(length);
             boost::asio::read(socket, boost::asio::buffer(dataFromServer.dataPtr(), dataFromServer.size()), ignored_error);
 
-            char* dataFromSrvChar = (char*) malloc(dataFromServer.size() + 1);
-            dataFromSrvChar[dataFromServer.size()] = '\0';
-            memcpy(dataFromSrvChar, dataFromServer.dataPtr(), dataFromServer.size());
-            std::string stringFromSrv(dataFromSrvChar);
-            //std::cout << "STR: " << stringFromSrv << std::endl;
-            if (stringFromSrv.compare(randStr) != 0)
+            //Checking for equality
+            if (!dataFromServer.equal(aToSend))
                 std::cout << "Strings *DO NOT* compare EQUAL, test failed!" << std::endl;
-
-            free(dataFromSrvChar);
-
         }
         crypto.printAverage();
         socket.close();

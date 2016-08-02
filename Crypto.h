@@ -16,12 +16,13 @@ class Data {
     public:
         Data() {}
         Data(int size);
-        
+
         unsigned char* dataPtr();
         const unsigned char* dataPtr() const;
         void resize(int size);
         int size();
         const int size() const;
+        bool equal(const Data& toCompare);
 
     private:
         std::vector<unsigned char> data_;
@@ -29,13 +30,8 @@ class Data {
 
 class AESData {
     public:
-        unsigned char* key;
-        unsigned char initVector[EVP_MAX_IV_LENGTH];
-        int length;
-
-        AESData() : key(NULL), length(0) {}
-        AESData(int size);
-        ~AESData();
+        Data key;
+        Data initVector;
 };
 
 class CryptoCollection {
@@ -66,7 +62,7 @@ class CryptoCollection {
     private:
         void errorHandle();
 
-        void envelope_seal(EVP_PKEY** publicKey, const Data& toEncrypt, Data& oEncryptedData, AESData& oAESData);
+        void envelope_seal(EVP_PKEY* publicKey, const Data& toEncrypt, Data& oEncryptedData, AESData& oAESData);
         void envelope_open(const Data& encryptedData, Data& oDecryptedData, const AESData& iAESData);
         void loadKeys();
         void unloadKeys();
@@ -78,4 +74,5 @@ class CryptoCollection {
         std::vector<float> signTime, encryptTime, decryptTime, verifyTime;
         int messagesReceived = 0;
         std::map<std::string, EVP_PKEY*> keys;
+        static const int numOfAsymmetricKeypairs = 1;
 };
