@@ -4,6 +4,7 @@
 #include "Crypto.h"
 
 using boost::asio::ip::tcp;
+using namespace CryptoUtils;
 
 static const char alphanum[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 

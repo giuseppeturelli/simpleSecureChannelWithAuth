@@ -10,6 +10,7 @@
 #include "Crypto.h"
 
 using boost::asio::ip::tcp;
+using namespace CryptoUtils;
 
 void sigIntHandlerFunction(int s) {
     exit(0);

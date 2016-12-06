@@ -1,22 +1,22 @@
 CC=g++
-CFLAGS=-std=c++11 -Wall -g
+CFLAGS=-std=c++11 -Wall
 
 all: client server
 
-Crypto.o: Crypto.cpp Crypto.h
-	$(CC) $(CFLAGS) Crypto.cpp -c
+Crypto.o: Crypto.cpp Crypto.h BaseSixtyFour.cpp BaseSixtyFour.h
+	$(CC) $(CFLAGS) Crypto.cpp BaseSixtyFour.cpp -c
 
-server.o: server.cpp Crypto.h
+server.o: server.cpp Crypto.h BaseSixtyFour.h
 	$(CC) $(CFLAGS) server.cpp -c
 
-client.o: client.cpp Crypto.h
+client.o: client.cpp Crypto.h BaseSixtyFour.h
 	$(CC) $(CFLAGS) client.cpp -c
 
-server: server.o Crypto.o
-	$(CC) $(CFLAGS) server.o Crypto.o -lcrypto -lboost_system -lpthread -o server
+server: server.o Crypto.o BaseSixtyFour.o
+	$(CC) $(CFLAGS) server.o Crypto.o BaseSixtyFour.o -lcrypto -lboost_system -lpthread -o server
 
-client: client.o Crypto.o
-	$(CC) $(CFLAGS) client.o Crypto.o -lcrypto -lboost_system -lpthread -o client
+client: client.o Crypto.o BaseSixtyFour.o
+	$(CC) $(CFLAGS) client.o Crypto.o BaseSixtyFour.o -lcrypto -lboost_system -lpthread -o client
 
 clean:
 	rm -rf *o

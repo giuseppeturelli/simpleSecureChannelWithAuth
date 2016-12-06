@@ -7,6 +7,8 @@
 #include <boost/shared_ptr.hpp>
 #include <map>
 
+namespace CryptoUtils {
+
 static const int keyLength = 1024;
 
 static const std::vector<std::string> privFile = {"./rsaKey1024", "./rsaKey2048", "./rsaKey4096"};
@@ -76,3 +78,5 @@ class CryptoCollection {
         std::map<std::string, EVP_PKEY*> keys;
         static const int numOfAsymmetricKeypairs = 1;
 };
+
+}//namespace CryptoUtils

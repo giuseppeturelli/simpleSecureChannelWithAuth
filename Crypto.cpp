@@ -1,14 +1,14 @@
 #include "Crypto.h"
+#include "BaseSixtyFour.h"
 #include <string.h>
 #include <iostream>
 #include <sys/timeb.h>
 #include <chrono>
-#include <vector>
-
 #include <openssl/rand.h>
 #include <openssl/err.h>
 #include <algorithm>
 
+namespace CryptoUtils {
 
 Data::Data(int size) {
     data_.resize(size);
@@ -198,6 +198,7 @@ void CryptoCollection::envelope_open(const Data& encryptedData, Data& oDecrypted
 void CryptoCollection::encryptAES(const AESData& iAESData, const Data& toEncrypt, Data& oEncryptedData) {
     //Initialization of cipher context
     EVP_CIPHER_CTX* cipherCtx = EVP_CIPHER_CTX_new();
+    BaseSixtyFour aB64;
 
     oEncryptedData.resize(toEncrypt.size());
 
@@ -461,3 +462,5 @@ void CryptoCollection::receiveEnvelope(AESData& iAESData, const Data& signatureD
 
     decryptTime.push_back(decryptionMicro.count());
 }
+
+}//namespace CryptoUtils
