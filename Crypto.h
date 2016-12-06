@@ -30,9 +30,9 @@ class Data {
         std::vector<unsigned char> data_;
 };
 
-class AESData {
+class EncryptedData {
     public:
-        Data key;
+        Data encryptedData;
         Data initVector;
 };
 
@@ -46,26 +46,29 @@ class CryptoCollection {
         void setPrivateKey(const std::string& keyFilePath);
         void setPublicKey(const std::string& keyFilePath);
 
-        void encryptAES(const AESData& iAESData, const Data& toEncrypt, Data& oEncryptedData);
-        void decryptAES(const AESData& iAESData, const Data& toDecrypt, Data& oDecryptedData);
+        void encryptAES(const Data& iAESData, const Data& toEncrypt, EncryptedData& oEncryptedData);
+        void decryptAES(const Data& iAESData, const EncryptedData& toDecrypt, Data& oDecryptedData);
 
-        void sign(const Data& toSign, Data& oSignatureData);
-        bool verify(const Data& signedData, const Data& signatureData);
+        void sign(const EncryptedData& toSign, Data& oSignatureData);
+        bool verify(const EncryptedData& signedData, const Data& signatureData);
 
         void encryptRSA(const Data& toEncrypt, Data& oEncryptedData);
         void decryptRSA(const Data& toDecrypt, Data& oDecryptedData);
 
-        void sendHomeMade(AESData& oAESData, const Data& dataToSend, Data& oEncryptedData, Data& oSignatureData);
-        void receiveHomeMade(AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData);
+        void sendHomeMade(Data& oAESData, const Data& dataToSend, EncryptedData& oEncryptedData, Data& oSignatureData);
+        void receiveHomeMade(Data& iAESData, const Data& signatureData, const EncryptedData& receivedData, Data& oDecryptedData);
 
-        void sendEnvelope(AESData& oAESData, const Data& dataToSend, Data& oEncryptedData, Data& oSignatureData);
-        void receiveEnvelope(AESData& iAESData, const Data& signatureData, const Data& receivedData, Data& oDecryptedData);
+        void sendEnvelope(Data& oAESData, const Data& dataToSend, EncryptedData& oEncryptedData, Data& oSignatureData);
+        void receiveEnvelope(Data& iAESData, const Data& signatureData, const EncryptedData& receivedData, Data& oDecryptedData);
         void generateRandomBuffer(unsigned char* ioRandBuffer, int size);
+
+        std::string encryptAESString(const std::string& stringToEncrypt);
+        std::string decryptAESString(const std::string& base64StringToDecrypt);
     private:
         void errorHandle();
 
-        void envelope_seal(EVP_PKEY* publicKey, const Data& toEncrypt, Data& oEncryptedData, AESData& oAESData);
-        void envelope_open(const Data& encryptedData, Data& oDecryptedData, const AESData& iAESData);
+        void envelope_seal(EVP_PKEY* publicKey, const Data& toEncrypt, EncryptedData& oEncryptedData, Data& oAESData);
+        void envelope_open(const EncryptedData& encryptedData, Data& oDecryptedData, const Data& iAESData);
         void loadKeys();
         void unloadKeys();
         void loadPrivKey(std::string keyFilePath);

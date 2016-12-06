@@ -66,8 +66,8 @@ int main(int argc, char* argv[]) {
 
         //Encrypting, sending the encrypted data, receiving the decrypted data (in clear, this is a PoC) and verifying that the cleartext data matches
         for (int q = 0; q < arg2; q++) {
-            AESData aAESData;
-            Data aEncryptedData;
+            Data aAESData;
+            EncryptedData aEncryptedData;
             Data aSignatureData;
 
             crypto.sendEnvelope(aAESData, aToSend, aEncryptedData, aSignatureData);
@@ -77,15 +77,15 @@ int main(int argc, char* argv[]) {
             boost::asio::write(socket, boost::asio::buffer(lengthM, 9), ignored_error);
 
             //Sending the AES encrypted key
-            std::sprintf(lengthM, "%8d", static_cast<int>(aAESData.key.size()));
+            std::sprintf(lengthM, "%8d", static_cast<int>(aAESData.size()));
             boost::asio::write(socket, boost::asio::buffer(lengthM, 9), ignored_error);
-            boost::asio::write(socket, boost::asio::buffer(aAESData.key.dataPtr(), aAESData.key.size()), ignored_error);
-            boost::asio::write(socket, boost::asio::buffer(aAESData.initVector.dataPtr(), aAESData.initVector.size()), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(aAESData.dataPtr(), aAESData.size()), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(aEncryptedData.initVector.dataPtr(), aEncryptedData.initVector.size()), ignored_error);
 
             //Sending encrypted data
-            std::sprintf(lengthM, "%8d", static_cast<int>(aEncryptedData.size()));
+            std::sprintf(lengthM, "%8d", static_cast<int>(aEncryptedData.encryptedData.size()));
             boost::asio::write(socket, boost::asio::buffer(lengthM, 9), ignored_error);
-            boost::asio::write(socket, boost::asio::buffer(aEncryptedData.dataPtr(), aEncryptedData.size()), ignored_error);
+            boost::asio::write(socket, boost::asio::buffer(aEncryptedData.encryptedData.dataPtr(), aEncryptedData.encryptedData.size()), ignored_error);
 
             //Sending signature data
             std::sprintf(lengthM, "%8d", static_cast<int>(aSignatureData.size()));

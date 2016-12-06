@@ -48,18 +48,22 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
                 //Getting AES key data (encrypted)
                 boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
                 int length = std::atoi(buf.data());
-                AESData aAESData;
-                aAESData.key.resize(length);
-                aAESData.initVector.resize(EVP_MAX_IV_LENGTH);
+                Data aAESData;
+                aAESData.resize(length);
 
-                boost::asio::read(socket_, boost::asio::buffer(aAESData.key.dataPtr(), aAESData.key.size()), ignored_error);
-                boost::asio::read(socket_, boost::asio::buffer(aAESData.initVector.dataPtr(), aAESData.initVector.size()), ignored_error);
+                EncryptedData aEncryptedData;
+                aEncryptedData.initVector.resize(EVP_MAX_IV_LENGTH);
+
+                boost::asio::read(socket_, boost::asio::buffer(aAESData.dataPtr(), aAESData.size()), ignored_error);
+                boost::asio::read(socket_, boost::asio::buffer(aEncryptedData.initVector.dataPtr(), aEncryptedData.initVector.size()), ignored_error);
 
                 //Getting Encrypted data
                 boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
                 length = std::atoi(buf.data());
-                Data aEncryptedData(length);
-                boost::asio::read(socket_, boost::asio::buffer(aEncryptedData.dataPtr(), aEncryptedData.size()), ignored_error);
+                aEncryptedData.encryptedData.resize(length);
+
+
+                boost::asio::read(socket_, boost::asio::buffer(aEncryptedData.encryptedData.dataPtr(), aEncryptedData.encryptedData.size()), ignored_error);
 
                 //Getting Signature data
                 boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
