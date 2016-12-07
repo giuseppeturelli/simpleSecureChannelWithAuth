@@ -12,9 +12,9 @@ namespace CryptoUtils {
 
 static const int AESkeyLength = 32;
 
-static const std::vector<std::string> privFile = {"./rsaKey1024", "./rsaKey2048", "./rsaKey4096"};
-static const std::vector<std::string> pubFile = {"./rsaKey1024_pub", "./rsaKey2048_pub", "./rsaKey4096_pub"};
-static const std::string aesFile("./aesKey256");
+static const std::vector<std::string> privFile = {"./cryptoFiles/rsaKey1024", "./cryptoFiles/rsaKey2048", "./cryptoFiles/rsaKey4096"};
+static const std::vector<std::string> pubFile = {"./cryptoFiles/rsaKey1024_pub", "./cryptoFiles/rsaKey2048_pub", "./cryptoFiles/rsaKey4096_pub"};
+static const std::string aesFile("./cryptoFiles/aesKey256");
 
 class Data {
     public:
