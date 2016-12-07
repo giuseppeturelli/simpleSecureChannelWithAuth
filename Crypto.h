@@ -1,3 +1,4 @@
+#include "BaseSixtyFour.h"
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
@@ -9,10 +10,11 @@
 
 namespace CryptoUtils {
 
-static const int keyLength = 1024;
+static const int AESkeyLength = 32;
 
 static const std::vector<std::string> privFile = {"./rsaKey1024", "./rsaKey2048", "./rsaKey4096"};
 static const std::vector<std::string> pubFile = {"./rsaKey1024_pub", "./rsaKey2048_pub", "./rsaKey4096_pub"};
+static const std::string aesFile("./aesKey256");
 
 class Data {
     public:
@@ -62,6 +64,7 @@ class CryptoCollection {
         void receiveEnvelope(Data& iAESData, const Data& signatureData, const EncryptedData& receivedData, Data& oDecryptedData);
         void generateRandomBuffer(unsigned char* ioRandBuffer, int size);
 
+        void loadAESKey(std::string keyFilePath);
         std::string encryptAESString(const std::string& stringToEncrypt);
         std::string decryptAESString(const std::string& base64StringToDecrypt);
     private:
@@ -74,12 +77,14 @@ class CryptoCollection {
         void loadPrivKey(std::string keyFilePath);
         void loadPubKey(std::string keyFilePath);
 
+        BaseSixtyFour aB64;
         EVP_PKEY* privateKey;
         EVP_PKEY* publicKey;
         std::vector<float> signTime, encryptTime, decryptTime, verifyTime;
         int messagesReceived = 0;
         std::map<std::string, EVP_PKEY*> keys;
         static const int numOfAsymmetricKeypairs = 1;
+        Data theAESKey;
 };
 
 }//namespace CryptoUtils

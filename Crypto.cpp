@@ -1,7 +1,7 @@
 #include "Crypto.h"
-#include "BaseSixtyFour.h"
 #include <string.h>
 #include <iostream>
+#include <fstream>
 #include <sys/timeb.h>
 #include <chrono>
 #include <openssl/rand.h>
@@ -74,6 +74,7 @@ void CryptoCollection::loadKeys() {
     for (; it != pubFile.end();++it) {
         loadPubKey(*it);
     }
+    loadAESKey(aesFile);
 }
 
 void CryptoCollection::unloadKeys() {
@@ -123,12 +124,26 @@ void CryptoCollection::generateRandomBuffer(unsigned char* ioRandBuffer, int siz
     RAND_bytes(ioRandBuffer, size);
 }
 
+
+
 void CryptoCollection::errorHandle() {
     char error[1024];
     ERR_load_crypto_strings();
     ERR_error_string_n(ERR_get_error(), error, 1024);
     std::cout << "Error value: " << error << std::endl;
     exit(1);
+}
+
+void CryptoCollection::loadAESKey(std::string keyFilePath) {
+    std::ifstream infile(keyFilePath);
+    std::string line;
+    if (!std::getline(infile, line) || line.length() > 2*AESkeyLength) {
+        std::cout << "AES key missing or too long!" << std::endl;
+    } else {
+        size_t oSize;
+        theAESKey.resize(AESkeyLength);
+        aB64.decodeBase64FromStringToChar(line, (char *)theAESKey.dataPtr(), &oSize);
+    }
 }
 
 void CryptoCollection::envelope_seal(EVP_PKEY* publicKey, const Data& toEncrypt, EncryptedData& oEncryptedData, Data& oAESData) {
@@ -463,13 +478,50 @@ void CryptoCollection::receiveEnvelope(Data& iAESData, const Data& signatureData
     decryptTime.push_back(decryptionMicro.count());
 }
 
-std::string CryptoCollection::encryptAESString(const std::string& base64StringToEncrypt) {
-    return "";
+std::string CryptoCollection::encryptAESString(const std::string& stringToEncrypt) {
+    Data toEncryptData;
+    toEncryptData.resize(stringToEncrypt.length());
+    memcpy(toEncryptData.dataPtr(), stringToEncrypt.c_str(), stringToEncrypt.length());
 
+    EncryptedData encryptedData;
+    encryptedData.initVector.resize(EVP_MAX_IV_LENGTH);
+    encryptedData.encryptedData.resize(stringToEncrypt.length());
+    generateRandomBuffer(encryptedData.initVector.dataPtr(), EVP_MAX_IV_LENGTH);
+
+    encryptAES(theAESKey, toEncryptData, encryptedData);
+    Data ivAndEncryptedData;
+    ivAndEncryptedData.resize(encryptedData.initVector.size()+encryptedData.encryptedData.size());
+    memcpy(ivAndEncryptedData.dataPtr(), encryptedData.initVector.dataPtr(), encryptedData.initVector.size());
+    memcpy(ivAndEncryptedData.dataPtr()+encryptedData.initVector.size(), encryptedData.encryptedData.dataPtr(), encryptedData.encryptedData.size());
+
+    return aB64.encodeBase64FromCharToString((char *)ivAndEncryptedData.dataPtr(), ivAndEncryptedData.size());
 }
 
 std::string CryptoCollection::decryptAESString(const std::string& base64StringToDecrypt) {
-    return "";
+    
+    Data unbase64Data;
+    unbase64Data.resize(base64StringToDecrypt.length());
+    size_t oLength = 0;
+    aB64.decodeBase64FromStringToChar(base64StringToDecrypt, (char *)unbase64Data.dataPtr(), &oLength);
+    unbase64Data.resize(oLength);
+
+    EncryptedData toDecrypt;
+    toDecrypt.initVector.resize(EVP_MAX_IV_LENGTH);
+    toDecrypt.encryptedData.resize(unbase64Data.size()-EVP_MAX_BLOCK_LENGTH);
+
+    memcpy(toDecrypt.initVector.dataPtr(), unbase64Data.dataPtr(), EVP_MAX_BLOCK_LENGTH);
+    memcpy(toDecrypt.encryptedData.dataPtr(), unbase64Data.dataPtr()+EVP_MAX_BLOCK_LENGTH, unbase64Data.size()-EVP_MAX_BLOCK_LENGTH);
+
+    Data decryptedData;
+    decryptedData.resize(toDecrypt.encryptedData.size());
+
+    decryptAES(theAESKey, toDecrypt, decryptedData);
+
+    decryptedData.resize(decryptedData.size()+1);
+    decryptedData.dataPtr()[decryptedData.size()-1] = '\0';
+
+    std::string decryptedString((char *)decryptedData.dataPtr());
+    return decryptedString;
 }
 
 }//namespace CryptoUtils
