@@ -213,9 +213,8 @@ void CryptoCollection::envelope_open(const EncryptedData& encryptedData, Data& o
 void CryptoCollection::encryptAES(const Data& iAESData, const Data& toEncrypt, EncryptedData& oEncryptedData) {
     //Initialization of cipher context
     EVP_CIPHER_CTX* cipherCtx = EVP_CIPHER_CTX_new();
-    BaseSixtyFour aB64;
 
-    oEncryptedData.encryptedData.resize(toEncrypt.size());
+    oEncryptedData.encryptedData.resize(toEncrypt.size()+EVP_MAX_BLOCK_LENGTH);
 
     //START: Message Encryption operation
     int totLength = 0;
@@ -231,6 +230,7 @@ void CryptoCollection::encryptAES(const Data& iAESData, const Data& toEncrypt, E
     if (1 != EVP_EncryptFinal_ex(cipherCtx, oEncryptedData.encryptedData.dataPtr() + partialLength, &partialLength))
         errorHandle();
 
+    totLength += partialLength;
     oEncryptedData.encryptedData.resize(totLength);
     //END: Message Encryption operation
     EVP_CIPHER_CTX_free(cipherCtx);
@@ -489,6 +489,7 @@ std::string CryptoCollection::encryptAESString(const std::string& stringToEncryp
     generateRandomBuffer(encryptedData.initVector.dataPtr(), EVP_MAX_IV_LENGTH);
 
     encryptAES(theAESKey, toEncryptData, encryptedData);
+
     Data ivAndEncryptedData;
     ivAndEncryptedData.resize(encryptedData.initVector.size()+encryptedData.encryptedData.size());
     memcpy(ivAndEncryptedData.dataPtr(), encryptedData.initVector.dataPtr(), encryptedData.initVector.size());
@@ -507,10 +508,10 @@ std::string CryptoCollection::decryptAESString(const std::string& base64StringTo
 
     EncryptedData toDecrypt;
     toDecrypt.initVector.resize(EVP_MAX_IV_LENGTH);
-    toDecrypt.encryptedData.resize(unbase64Data.size()-EVP_MAX_BLOCK_LENGTH);
+    toDecrypt.encryptedData.resize(unbase64Data.size()-EVP_MAX_IV_LENGTH);
 
-    memcpy(toDecrypt.initVector.dataPtr(), unbase64Data.dataPtr(), EVP_MAX_BLOCK_LENGTH);
-    memcpy(toDecrypt.encryptedData.dataPtr(), unbase64Data.dataPtr()+EVP_MAX_BLOCK_LENGTH, unbase64Data.size()-EVP_MAX_BLOCK_LENGTH);
+    memcpy(toDecrypt.initVector.dataPtr(), unbase64Data.dataPtr(), EVP_MAX_IV_LENGTH);
+    memcpy(toDecrypt.encryptedData.dataPtr(), unbase64Data.dataPtr()+EVP_MAX_IV_LENGTH, unbase64Data.size()-EVP_MAX_IV_LENGTH);
 
     Data decryptedData;
     decryptedData.resize(toDecrypt.encryptedData.size());
