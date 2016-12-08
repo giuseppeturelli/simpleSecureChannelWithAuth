@@ -18,6 +18,9 @@ server: server.o Crypto.o BaseSixtyFour.o
 client: client.o Crypto.o BaseSixtyFour.o
 	$(CC) $(CFLAGS) client.o Crypto.o BaseSixtyFour.o -lcrypto -lboost_system -lpthread -o client
 
+test.o: Crypto.o BaseSixtyFour.o
+	$(CC) $(CFLAGS) test.cpp -c
+
 test: test.o Crypto.o BaseSixtyFour.o
 	$(CC) $(CFLAGS) test.o Crypto.o BaseSixtyFour.o -lcrypto -o test
 
