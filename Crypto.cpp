@@ -139,11 +139,23 @@ void CryptoCollection::loadAESKey(std::string keyFilePath) {
     std::string line;
     if (!std::getline(infile, line) || line.length() > 2*AESkeyLength) {
         std::cout << "AES key missing or too long!" << std::endl;
+        std::cout << "A brand new AES key will be generated and stored!" << std::endl;
+        this->generateAndStoreAESKey(keyFilePath);
     } else {
         size_t oSize;
         theAESKey.resize(AESkeyLength);
         aB64.decodeBase64FromStringToChar(line, (char *)theAESKey.dataPtr(), &oSize);
     }
+    infile.close();
+}
+
+void CryptoCollection::generateAndStoreAESKey(std::string keyFilePath) {
+    std::ofstream outfile(keyFilePath);
+    theAESKey.resize(AESkeyLength);
+    generateRandomBuffer(theAESKey.dataPtr(), AESkeyLength);
+    std::string b64EncodedAESKey = aB64.encodeBase64FromCharToString((char *)theAESKey.dataPtr(), theAESKey.size());
+    outfile << b64EncodedAESKey;
+    outfile.close();
 }
 
 void CryptoCollection::envelope_seal(EVP_PKEY* publicKey, const Data& toEncrypt, EncryptedData& oEncryptedData, Data& oAESData) {
@@ -479,8 +491,7 @@ void CryptoCollection::receiveEnvelope(Data& iAESData, const Data& signatureData
 }
 
 std::string CryptoCollection::encryptAESString(const std::string& stringToEncrypt) {
-    Data toEncryptData;
-    toEncryptData.resize(stringToEncrypt.length());
+    Data toEncryptData(stringToEncrypt.length());
     memcpy(toEncryptData.dataPtr(), stringToEncrypt.c_str(), stringToEncrypt.length());
 
     EncryptedData encryptedData;
@@ -500,8 +511,7 @@ std::string CryptoCollection::encryptAESString(const std::string& stringToEncryp
 
 std::string CryptoCollection::decryptAESString(const std::string& base64StringToDecrypt) {
     
-    Data unbase64Data;
-    unbase64Data.resize(base64StringToDecrypt.length());
+    Data unbase64Data(base64StringToDecrypt.length());
     size_t oLength = 0;
     aB64.decodeBase64FromStringToChar(base64StringToDecrypt, (char *)unbase64Data.dataPtr(), &oLength);
     unbase64Data.resize(oLength);

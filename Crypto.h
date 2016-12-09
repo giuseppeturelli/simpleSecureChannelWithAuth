@@ -14,7 +14,7 @@ static const int AESkeyLength = 32;
 
 static const std::vector<std::string> privFile = {"./cryptoFiles/rsaKey1024", "./cryptoFiles/rsaKey2048", "./cryptoFiles/rsaKey4096"};
 static const std::vector<std::string> pubFile = {"./cryptoFiles/rsaKey1024_pub", "./cryptoFiles/rsaKey2048_pub", "./cryptoFiles/rsaKey4096_pub"};
-static const std::string aesFile("./cryptoFiles/aesKey256");
+static const std::string aesFile("./cryptoFiles/tempaesKey256");
 
 class Data {
     public:
@@ -65,6 +65,7 @@ class CryptoCollection {
         void generateRandomBuffer(unsigned char* ioRandBuffer, int size);
 
         void loadAESKey(std::string keyFilePath);
+        void generateAndStoreAESKey(std::string keyFilePath);
         std::string encryptAESString(const std::string& stringToEncrypt);
         std::string decryptAESString(const std::string& base64StringToDecrypt);
     private:
