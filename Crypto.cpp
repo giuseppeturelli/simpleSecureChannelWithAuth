@@ -131,7 +131,7 @@ void CryptoCollection::errorHandle() {
     ERR_load_crypto_strings();
     ERR_error_string_n(ERR_get_error(), error, 1024);
     std::cout << "Error value: " << error << std::endl;
-    exit(1);
+    throw 1;
 }
 
 void CryptoCollection::loadAESKey(std::string keyFilePath) {
