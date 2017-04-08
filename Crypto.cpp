@@ -10,34 +10,6 @@
 
 namespace CryptoUtils {
 
-Data::Data(int size) {
-    data_.resize(size);
-}
-
-unsigned char* Data::dataPtr() {
-    return &data_[0];
-}
-
-const unsigned char* Data::dataPtr() const {
-    return &data_[0];
-}
-
-void Data::resize(int size) {
-    data_.resize(size);
-}
-
-int Data::size() {
-    return data_.size();
-}
-
-const int Data::size() const {
-    return data_.size();
-}
-
-bool Data::equal(const Data& toCompare) {
-    return std::equal(data_.begin(), data_.end(), toCompare.data_.begin());
-}
-
 CryptoCollection::CryptoCollection() {
     loadKeys();
 }
@@ -94,7 +66,7 @@ void CryptoCollection::loadPubKey(std::string keyFilePath) {
         fclose(fp);
         keys[keyFilePath] = loadedKey;
     } else {
-        std::cout << "RSA key missing!" << std::endl;
+        std::cout << "PubKey missing!" << std::endl;
     }
 }
 
@@ -108,7 +80,7 @@ void CryptoCollection::loadPrivKey(std::string keyFilePath) {
         fclose(fp);
         keys[keyFilePath] = loadedKey;
     } else {
-        std::cout << "RSA key missing!" << std::endl;
+        std::cout << "PrivKey missing!" << std::endl;
     }
 }
 
@@ -312,7 +284,7 @@ bool CryptoCollection::verify(const EncryptedData& signedData, const Data& signa
     if (1 != EVP_DigestVerifyUpdate(digestSignCtx, signedData.encryptedData.dataPtr(), signedData.encryptedData.size()))
         return false;
 
-    bool ret = EVP_DigestVerifyFinal(digestSignCtx, signatureData.dataPtr(), signatureData.size());
+    bool ret = EVP_DigestVerifyFinal(digestSignCtx, (unsigned char*) signatureData.dataPtr(), signatureData.size());
 
     EVP_MD_CTX_destroy(digestSignCtx);
 

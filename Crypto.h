@@ -1,4 +1,5 @@
 #include "BaseSixtyFour.h"
+#include "Structures.h"
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
@@ -15,28 +16,6 @@ static const int AESkeyLength = 32;
 static const std::vector<std::string> privFile = {"./cryptoFiles/rsaKey1024", "./cryptoFiles/rsaKey2048", "./cryptoFiles/rsaKey4096"};
 static const std::vector<std::string> pubFile = {"./cryptoFiles/rsaKey1024_pub", "./cryptoFiles/rsaKey2048_pub", "./cryptoFiles/rsaKey4096_pub"};
 static const std::string aesFile("./cryptoFiles/tempaesKey256");
-
-class Data {
-    public:
-        Data() {}
-        Data(int size);
-
-        unsigned char* dataPtr();
-        const unsigned char* dataPtr() const;
-        void resize(int size);
-        int size();
-        const int size() const;
-        bool equal(const Data& toCompare);
-
-    private:
-        std::vector<unsigned char> data_;
-};
-
-class EncryptedData {
-    public:
-        Data encryptedData;
-        Data initVector;
-};
 
 class CryptoCollection {
     public:
