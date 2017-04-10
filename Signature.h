@@ -1,5 +1,5 @@
 #include "BaseSixtyFour.h"
-#include "Structures.h"
+#include "CryptoStructures.h"
 #include <openssl/evp.h>
 
 namespace CryptoUtils {
