@@ -1,14 +1,14 @@
 #include "CryptoStructures.h"
 #include "Signature.h"
+#include "KeyManager.h"
 
 namespace CryptoUtils {
 class Envelope {
     private:
         static const int numOfAsymmetricKeypairs = 1;
-        EVP_PKEY* publicKey;
-        EVP_PKEY* privateKey;
 
         Signature _signature;
+        KeyManager _keyMgr;
 
     public:
         void sendEnvelope(Data& oAESData, const Data& dataToSend, EncryptedData& oEncryptedData, Data& oSignatureData);

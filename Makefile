@@ -1,31 +1,25 @@
 CC=g++
 CFLAGS=-std=c++11 -Wall -g
+LDFLAGS= -lcrypto -lboost_system -lpthread
+SOURCES=Envelope.cpp Signature.cpp CryptoStructures.cpp KeyManager.cpp 
+SOURCESCLIENT=$(SOURCES) client.cpp
+SOURCESSERVER=$(SOURCES) server.cpp
+OBJECTSSERVER=$(SOURCESSERVER:.cpp=.o)
+OBJECTSCLIENT=$(SOURCESCLIENT:.cpp=.o)
+CLIENTEX=client
+SERVEREX=server
 
-all: client server
+all: $(SOURCESCLIENT) $(SURCESSERVER) $(CLIENTEX) $(SERVEREX)
+	
+$(CLIENTEX): $(OBJECTSCLIENT)
+	$(CC) $(LDFLAGS) $(OBJECTSCLIENT) -o $@
 
-Crypto.o: Crypto.cpp Crypto.h BaseSixtyFour.cpp BaseSixtyFour.h
-	$(CC) $(CFLAGS) Crypto.cpp BaseSixtyFour.cpp -c
+$(SERVEREX): $(OBJECTSSERVER)
+	$(CC) $(LDFLAGS) $(OBJECTSSERVER) -o $@
 
-CryptoAES.o: CryptoAES.cpp CryptoAES.h BaseSixtyFour.cpp BaseSixtyFour.h
-	$(CC) $(CFLAGS) CryptoAES.cpp BaseSixtyFour.cpp -c
-
-server.o: server.cpp Crypto.h BaseSixtyFour.h
-	$(CC) $(CFLAGS) server.cpp -c
-
-client.o: client.cpp Crypto.h BaseSixtyFour.h
-	$(CC) $(CFLAGS) client.cpp -c
-
-server: server.o Crypto.o BaseSixtyFour.o
-	$(CC) $(CFLAGS) server.o Crypto.o BaseSixtyFour.o -lcrypto -lboost_system -lpthread -o server
-
-client: client.o Crypto.o BaseSixtyFour.o
-	$(CC) $(CFLAGS) client.o Crypto.o BaseSixtyFour.o -lcrypto -lboost_system -lpthread -o client
-
-test.o: CryptoAES.o BaseSixtyFour.o
-	$(CC) $(CFLAGS) test.cpp -c
-
-test: test.o CryptoAES.o BaseSixtyFour.o
-	$(CC) $(CFLAGS) test.o CryptoAES.o BaseSixtyFour.o -lcrypto -o test
+.cpp.o:
+	$(CC) $(CFLAGS) $< -c -o $@
 
 clean:
 	rm -rf *o
+

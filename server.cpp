@@ -7,7 +7,7 @@
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
 #include <iostream>
-#include "Crypto.h"
+#include "Envelope.h"
 
 using boost::asio::ip::tcp;
 using namespace CryptoUtils;
@@ -29,7 +29,7 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
         }
 
         void start() {
-            CryptoCollection crypto;
+            Envelope envelope;
             boost::array<char, 9> buf;
             boost::system::error_code ignored_error;
 
@@ -41,9 +41,6 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
             for (int t = 0; t < numOfMessagesInSession; ++t) {
                 boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
                 int keyUsed = std::atoi(buf.data());
-
-                crypto.setPrivateKey(privFile[keyUsed]);
-                crypto.setPublicKey(pubFile[keyUsed]);
 
                 //Getting AES key data (encrypted)
                 boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
@@ -73,7 +70,7 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
 
                 //Decrypting data
                 Data aDecryptedData;
-                crypto.receiveEnvelope(aAESData, aSignatureData, aEncryptedData, aDecryptedData);
+                envelope.receiveEnvelope(aAESData, aSignatureData, aEncryptedData, aDecryptedData);
 
                 //Sending decrypted data in cleartext for verification (this is a PoC)
                 char lengthM[9];
@@ -81,8 +78,6 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
                 boost::asio::write(socket_, boost::asio::buffer(lengthM, 9), ignored_error);
                 boost::asio::write(socket_, boost::asio::buffer(aDecryptedData.dataPtr(), aDecryptedData.size()), ignored_error);
             }
-
-            crypto.printAverage();
         }
 
         private:

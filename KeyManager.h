@@ -1,4 +1,5 @@
-#include "BaseSixtyFour.h"
+#ifndef KEYMANAGER_H
+#define KEYMANAGER_H
 #include "CryptoStructures.h"
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
@@ -16,6 +17,7 @@ static const int AESkeyLength = 32;
 static const std::vector<std::string> privFile = {"./cryptoFiles/rsaKey1024", "./cryptoFiles/rsaKey2048", "./cryptoFiles/rsaKey4096"};
 static const std::vector<std::string> pubFile = {"./cryptoFiles/rsaKey1024_pub", "./cryptoFiles/rsaKey2048_pub", "./cryptoFiles/rsaKey4096_pub"};
 static const std::string aesFile("./cryptoFiles/tempaesKey256");
+
 
 class KeyManager {
     public:
@@ -39,3 +41,4 @@ class KeyManager {
 };
 
 }//namespace CryptoUtils
+#endif //KEYMANAGER_H

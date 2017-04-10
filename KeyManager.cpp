@@ -8,7 +8,9 @@
 #include <openssl/err.h>
 #include <algorithm>
 
+
 namespace CryptoUtils {
+
 KeyManager::KeyManager() {
     loadKeys();
 }

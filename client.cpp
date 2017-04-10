@@ -1,7 +1,7 @@
 #include <iostream>
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
-#include "Crypto.h"
+#include "Envelope.h"
 
 using boost::asio::ip::tcp;
 using namespace CryptoUtils;
@@ -14,7 +14,7 @@ char genRandom() {
 
 int main(int argc, char* argv[]) {
 
-    CryptoCollection crypto;
+    Envelope envelope;
 
     try {
         if (argc != 5) {
@@ -30,9 +30,6 @@ int main(int argc, char* argv[]) {
             std::cerr << "0, 1 or 2 are the keys available" << std::endl;
             return 1;
         }
-
-        crypto.setPrivateKey(privFile[arg3]);
-        crypto.setPublicKey(pubFile[arg3]);
 
         unsigned int toSendSize = arg4;
 
@@ -71,7 +68,7 @@ int main(int argc, char* argv[]) {
             EncryptedData aEncryptedData;
             Data aSignatureData;
 
-            crypto.sendEnvelope(aAESData, aToSend, aEncryptedData, aSignatureData);
+            envelope.sendEnvelope(aAESData, aToSend, aEncryptedData, aSignatureData);
 
             //Sending info about the private keypair used
             std::sprintf(lengthM, "%8d", static_cast<int>(arg3));
@@ -103,7 +100,6 @@ int main(int argc, char* argv[]) {
             if (!dataFromServer.equal(aToSend))
                 std::cout << "Strings *DO NOT* compare EQUAL, test failed!" << std::endl;
         }
-        crypto.printAverage();
         socket.close();
     }
 
