@@ -1,23 +1,31 @@
 CC=g++
 CFLAGS=-std=c++11 -Wall -g
-LDFLAGS=-L. -lcrypto -lboost_system -lpthread -lenvcry
-SOURCES=Envelope.cpp Signature.cpp CryptoStructures.cpp KeyManager.cpp client.cpp server.cpp
-OBJECTS=$(SOURCES:.cpp=.o)
-CLIENT=client
-SERVER=server
+
 LIB=libenvcry.so
-OBJECTSCRYLIB=Envelope.o Signature.o CryptoStructures.o KeyManager.o
+LIBLDFLAGS=-shared
+LIBCRYSRC=Envelope.cpp Signature.cpp CryptoStructures.cpp KeyManager.cpp
+LIBCRYOBJ=$(LIBCRYSRC:.cpp=.o)
 
-all: $(SOURCES) $(LIB) $(CLIENT) $(SERVER)
+LDFLAGS=-L. -lcrypto -lboost_system -lpthread -lenvcry
 
-$(LIB): $(OBJECTSCRYLIB)
-	$(CC) -shared $(OBJECTSCRYLIB) -o $@
+CLIENTSRC=client.cpp
+CLIENTOBJ=$(CLIENTSRC:.cpp=.o)
+CLIENT=client
+
+SERVERSRC=server.cpp
+SERVEROBJ=$(SERVERSRC:.cpp=.o)
+SERVER=server
+
+all: $(LIB) $(CLIENT) $(SERVER)
+
+$(LIB): $(LIBCRYOBJ)
+	$(CC) $(LIBLDFLAGS) $(LIBCRYOBJ) -o $@
 	
-$(CLIENT): $(OBJECTS)
-	$(CC) client.o $(LDFLAGS) -o $@
+$(CLIENT): $(CLIENTOBJ)
+	$(CC) $(CLIENTOBJ) $(LDFLAGS) -o $@
 
-$(SERVER): $(OBJECTS)
-	$(CC) server.o $(LDFLAGS) -o $@
+$(SERVER): $(SERVEROBJ)
+	$(CC) $(SERVEROBJ) $(LDFLAGS) -o $@
 
 .cpp.o:
 	$(CC) $(CFLAGS) $< -c -o $@
