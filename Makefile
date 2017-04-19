@@ -20,7 +20,7 @@ all: $(LIB) $(CLIENT) $(SERVER)
 
 $(LIB): $(LIBCRYOBJ)
 	$(CC) $(LIBLDFLAGS) $(LIBCRYOBJ) -o $@
-	
+
 $(CLIENT): $(CLIENTOBJ)
 	$(CC) $(CLIENTOBJ) $(LDFLAGS) -o $@
 

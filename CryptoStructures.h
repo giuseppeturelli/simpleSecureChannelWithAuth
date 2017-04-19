@@ -6,6 +6,7 @@
 #include <iostream>
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include <exception>
 
 namespace CryptoUtils {
 
@@ -30,6 +31,17 @@ class EncryptedData {
         Data encryptedData;
         Data initVector;
 };
+
+class CryptoException: public std::exception {
+    public:
+        CryptoException(const std::string& message);
+
+        virtual const char* what() const throw();
+
+    protected:
+        std::string _msg;
+};
+
 void errorHandle();
 }//namespace CryptoUtils
 #endif //CRYPTO_STRUCTURES_H
