@@ -4,7 +4,7 @@ namespace CryptoUtils {
 
 void Envelope::sendEnvelope(Data& oAESData, const Data& dataToSend, EncryptedData& oEncryptedData, Data& oSignatureData) {
     //Encrypting
-    EVP_PKEY* publicKey = _keyMgr.getPublicKeyFor(pubFile[0]);
+    EVP_PKEY* publicKey = _keyMgr.getEncryptionPublicKeyFor(pubFile[0]);
     envelope_seal(publicKey, dataToSend, oEncryptedData, oAESData);
 
     //Signing
@@ -24,7 +24,7 @@ void Envelope::receiveEnvelope(Data& iAESData, const Data& signatureData, const 
 
 void Envelope::sendEnvelope(Data& oAESData, const Data& dataToSend, EncryptedData& oEncryptedData) {
     //Encrypting
-    EVP_PKEY* publicKey = _keyMgr.getPublicKeyFor(pubFile[0]);
+    EVP_PKEY* publicKey = _keyMgr.getEncryptionPublicKeyFor(pubFile[0]);
     envelope_seal(publicKey, dataToSend, oEncryptedData, oAESData);
 }
 
@@ -48,7 +48,7 @@ void Envelope::envelope_seal(EVP_PKEY* publicKey, const Data& toEncrypt, Encrypt
     if(!(ctx = EVP_CIPHER_CTX_new()))
         errorHandle();
 
-    if (!EVP_SealInit(ctx, EVP_aes_128_cbc(), aAESkeyList, &keyLength, oEncryptedData.initVector.dataPtr(), &publicKey, numOfAsymmetricKeypairs))
+    if (!EVP_SealInit(ctx, EVP_aes_256_cbc(), aAESkeyList, &keyLength, oEncryptedData.initVector.dataPtr(), &publicKey, numOfAsymmetricKeypairs))
         errorHandle();
 
     oAESData.resize(keyLength);
@@ -79,7 +79,7 @@ void Envelope::envelope_open(const EncryptedData& encryptedData, Data& oDecrypte
     if(!(ctx = EVP_CIPHER_CTX_new()))
         errorHandle();
 
-    if (1 != EVP_OpenInit(ctx, EVP_aes_128_cbc(), iAESData.dataPtr(), iAESData.size(), encryptedData.initVector.dataPtr(), _keyMgr.getThePrivateKey()))
+    if (1 != EVP_OpenInit(ctx, EVP_aes_256_cbc(), iAESData.dataPtr(), iAESData.size(), encryptedData.initVector.dataPtr(), _keyMgr.getEncryptionPrivateKey()))
        errorHandle();
 
 

@@ -14,8 +14,8 @@ namespace CryptoUtils {
 
 static const int AESkeyLength = 32;
 
-static const std::vector<std::string> privFile = {"./cryptoFiles/rsaKey1024", "./cryptoFiles/rsaKey2048", "./cryptoFiles/rsaKey4096"};
-static const std::vector<std::string> pubFile = {"./cryptoFiles/rsaKey1024_pub", "./cryptoFiles/rsaKey2048_pub", "./cryptoFiles/rsaKey4096_pub"};
+static const std::vector<std::string> privFile = {"./cryptoFiles/rsaKey1024", "./cryptoFiles/rsaKey2048", "./cryptoFiles/rsaKey4096", "./cryptoFiles/eccKeyP160"};
+static const std::vector<std::string> pubFile = {"./cryptoFiles/rsaKey1024_pub", "./cryptoFiles/rsaKey2048_pub", "./cryptoFiles/rsaKey4096_pub", "./cryptoFiles/eccKeyP160_pub"};
 static const std::string aesFile("./cryptoFiles/tempaesKey256");
 
 
@@ -26,8 +26,10 @@ class KeyManager {
 
         void generateRandomBuffer(unsigned char* ioRandBuffer, int size);
 
-        virtual EVP_PKEY* getThePrivateKey();
-        virtual EVP_PKEY* getPublicKeyFor(const std::string& keyName);
+        virtual EVP_PKEY* getEncryptionPrivateKey();
+        virtual EVP_PKEY* getSignaturePrivateKey();
+        virtual EVP_PKEY* getEncryptionPublicKeyFor(const std::string& keyName);
+        virtual EVP_PKEY* getSignaturePublicKeyFor(const std::string& keyName);
 
     private:
         EVP_PKEY* _myPrivateKey;

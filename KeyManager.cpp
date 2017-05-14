@@ -19,12 +19,20 @@ KeyManager::~KeyManager() {
     unloadKeys();
 }
 
-EVP_PKEY* KeyManager::getThePrivateKey() {
+EVP_PKEY* KeyManager::getEncryptionPrivateKey() {
     return keys[privFile[0]];
 }
 
-EVP_PKEY* KeyManager::getPublicKeyFor(const std::string& keyName) {
+EVP_PKEY* KeyManager::getEncryptionPublicKeyFor(const std::string& keyName) {
     return keys[pubFile[0]];
+}
+
+EVP_PKEY* KeyManager::getSignaturePrivateKey() {
+    return keys[privFile[3]];
+}
+
+EVP_PKEY* KeyManager::getSignaturePublicKeyFor(const std::string& keyName) {
+    return keys[pubFile[3]];
 }
 
 void KeyManager::loadKeys() {

@@ -6,7 +6,7 @@ void Signature::sign(const Data& toSign, Data& oSignatureData) {
     //START: Message Signing operation
     EVP_MD_CTX* digestSignCtx = EVP_MD_CTX_create();
 
-    if (1 != EVP_DigestSignInit(digestSignCtx, NULL, EVP_sha256(), NULL, _keyMgr.getThePrivateKey()))
+    if (1 != EVP_DigestSignInit(digestSignCtx, NULL, EVP_sha256(), NULL, _keyMgr.getSignaturePrivateKey()))
         errorHandle();
 
     if (1 != EVP_DigestSignUpdate(digestSignCtx, toSign.dataPtr(), toSign.size()))
@@ -31,7 +31,7 @@ void Signature::sign(const Data& toSign, Data& oSignatureData) {
 bool Signature::verify(const Data& signedData, const Data& signatureData) {
     //START: Message Verifying operation
     EVP_MD_CTX* digestSignCtx = EVP_MD_CTX_create();
-    if (1 != EVP_DigestVerifyInit(digestSignCtx, NULL, EVP_sha256(), NULL, _keyMgr.getPublicKeyFor(pubFile[0])))
+    if (1 != EVP_DigestVerifyInit(digestSignCtx, NULL, EVP_sha256(), NULL, _keyMgr.getSignaturePublicKeyFor(pubFile[0])))
         errorHandle();
 
     if (1 != EVP_DigestVerifyUpdate(digestSignCtx, signedData.dataPtr(), signedData.size()))
