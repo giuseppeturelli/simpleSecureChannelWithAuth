@@ -6,11 +6,10 @@
 namespace CryptoUtils {
 class Signature {
     public:
-        void sign(const Data& toSign, Data& oSignatureData);
-        bool verify(const Data& signedData, const Data& signatureData);
+        std::string sign(const std::string& toSign);
+        bool verify(const std::string& signedData, const std::string& signatureData);
     private:
 
         KeyManager _keyMgr;
 };
 }//namespace CryptoUtils
-

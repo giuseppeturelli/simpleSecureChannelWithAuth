@@ -1,0 +1,43 @@
+//Internal container for plaintext and additional fields required, it is then serialized and encrypted
+message PlaintextDataInternal {
+    required string senderID = 1;
+    repeated string receiverID = 2; //To check that the receiveing application is among the recipients
+    required bytes data = 3;
+    optional bytes optionalParameters = 4;
+    optional bytes additionalInfo = 5;
+    optional uint64 timestamp = 6;
+}
+
+//Internal container for encrypted data (PlaintextDataInternal serialized and then encrypted) and its corresponding init vector
+message EncryptedData {
+    required bytes initVector = 1;
+    required bytes encryptedData = 2;
+}
+
+//Internal container for signature data together with the identifier of the sender application
+message SignatureData {
+    required string senderID = 1;
+    required bytes signatureData = 2;
+}
+
+//Internal container for a temp AES key encrypted with the receiverID public key
+message EncryptedKey {
+    required string receiverID = 1;
+    required bytes keyData = 2;
+}
+
+//Internal container for the CryptoPayload (it conatines everything that needs to be signed)
+message CryptoPayload {
+    required uint64 version = 1;
+
+    //Repeatable container of public-key-encrypted versions of the same AES keys with the indication of the corresponding receiverID
+    repeated EncryptedKey keys = 2;
+    optional EncryptedData encryptedData = 3;
+}
+
+//Container encapsulating all the necessary information (final message to be serialized and returned)
+message CryptoMessage {
+    optional bytes signature = 1;
+    optional bytes payload = 2;
+
+}

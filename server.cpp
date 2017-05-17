@@ -39,44 +39,27 @@ class tcp_connection : public boost::enable_shared_from_this<tcp_connection> {
 
             //Getting the keypair used, the AES encrypted data, the encrypted data, signature data, decrypt and verify and finally send the cleartext data to the client for verification
             for (int t = 0; t < numOfMessagesInSession; ++t) {
+
+                //Getting the cryptoMsg itself
                 boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
-                int keyUsed = std::atoi(buf.data());
+                int size = std::atoi(buf.data());
+                unsigned char* tempCryMsgBuf = new unsigned char[size];
+                boost::asio::read(socket_, boost::asio::buffer(tempCryMsgBuf, size), ignored_error);
 
-                //Getting AES key data (encrypted)
-                boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
-                int length = std::atoi(buf.data());
-                Data aAESData;
-                aAESData.resize(length);
+                std::string receivedMsgEncrypted((char*) tempCryMsgBuf, size);
 
-                EncryptedData aEncryptedData;
-                aEncryptedData.initVector.resize(EVP_MAX_IV_LENGTH);
-
-                boost::asio::read(socket_, boost::asio::buffer(aAESData.dataPtr(), aAESData.size()), ignored_error);
-                boost::asio::read(socket_, boost::asio::buffer(aEncryptedData.initVector.dataPtr(), aEncryptedData.initVector.size()), ignored_error);
-
-                //Getting Encrypted data
-                boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
-                length = std::atoi(buf.data());
-                aEncryptedData.encryptedData.resize(length);
-
-
-                boost::asio::read(socket_, boost::asio::buffer(aEncryptedData.encryptedData.dataPtr(), aEncryptedData.encryptedData.size()), ignored_error);
-
-                //Getting Signature data
-                boost::asio::read(socket_, boost::asio::buffer(buf, 9), ignored_error);
-                length = std::atoi(buf.data());
-                Data aSignatureData(length);
-                boost::asio::read(socket_, boost::asio::buffer(aSignatureData.dataPtr(), aSignatureData.size()), ignored_error);
+                delete[] tempCryMsgBuf;
 
                 //Decrypting data
-                Data aDecryptedData;
-                envelope.receiveEnvelope(aAESData, aSignatureData, aEncryptedData, aDecryptedData);
+                PlaintextDataReceived aDataReceived;
+                std::string strDataReceived = envelope.receiveEnvelope(receivedMsgEncrypted);
+                aDataReceived.ParseFromString(strDataReceived);
 
                 //Sending decrypted data in cleartext for verification (this is a PoC)
                 char lengthM[9];
-                std::sprintf(lengthM, "%8d", aDecryptedData.size());
+                std::sprintf(lengthM, "%8d", strDataReceived.size());
                 boost::asio::write(socket_, boost::asio::buffer(lengthM, 9), ignored_error);
-                boost::asio::write(socket_, boost::asio::buffer(aDecryptedData.dataPtr(), aDecryptedData.size()), ignored_error);
+                boost::asio::write(socket_, boost::asio::buffer(strDataReceived.data(), strDataReceived.size()), ignored_error);
             }
         }
 
@@ -113,6 +96,7 @@ class tcp_server {
 
 
 int main() {
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
 
     struct sigaction sigIntHandler;
     sigIntHandler.sa_handler = sigIntHandlerFunction;

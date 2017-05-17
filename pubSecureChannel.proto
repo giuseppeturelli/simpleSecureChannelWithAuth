@@ -1,0 +1,13 @@
+//Protobuf object to be filled by the user
+message PlaintextDataToSend {
+    repeated string receiverID = 1;
+    required bytes data = 2;
+    optional bytes optionalParameters = 3;
+}
+
+//Protobuf object returned containing data in clear
+message PlaintextDataReceived {
+    required string senderID = 1;
+    required bytes data = 2;
+    optional bytes additionalInfo = 3;
+}

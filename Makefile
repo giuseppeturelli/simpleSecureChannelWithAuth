@@ -2,11 +2,12 @@ CC=g++
 CFLAGS=-std=c++11 -Wall -g
 
 LIB=libenvcry.so
-LIBLDFLAGS=-shared
+LIBLDFLAGS=-shared$
+PROTOSRC=pubSecureChannel.pb.cc secureChannel.pb.cc
 LIBCRYSRC=Envelope.cpp Signature.cpp CryptoStructures.cpp KeyManager.cpp
-LIBCRYOBJ=$(LIBCRYSRC:.cpp=.o)
+LIBCRYOBJ=$(LIBCRYSRC:.cpp=.o) $(PROTOSRC:.cc=.o)
 
-LDFLAGS=-L. -lcrypto -lboost_system -lpthread -lenvcry
+LDFLAGS=-L. -lcrypto -lboost_system -lpthread -lprotobuf -lenvcry
 
 CLIENTSRC=client.cpp
 CLIENTOBJ=$(CLIENTSRC:.cpp=.o)
@@ -30,6 +31,9 @@ $(SERVER): $(SERVEROBJ)
 .cpp.o:
 	$(CC) $(CFLAGS) $< -c -o $@
 
+.cc.o:
+	$(CC) $(CFLAGS) $< -c -o $@
+
 clean:
-	rm -rf *.o
+	rm -rf *.o *.so
 

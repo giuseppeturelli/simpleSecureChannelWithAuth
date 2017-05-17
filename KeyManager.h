@@ -31,6 +31,8 @@ class KeyManager {
         virtual EVP_PKEY* getEncryptionPublicKeyFor(const std::string& keyName);
         virtual EVP_PKEY* getSignaturePublicKeyFor(const std::string& keyName);
 
+        virtual std::string getMyID() { return "nox.amadeus.net"; }
+
     private:
         EVP_PKEY* _myPrivateKey;
         void loadKeys();
